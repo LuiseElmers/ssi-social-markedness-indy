@@ -1,21 +1,32 @@
-networks:
-  von_net:
-    external: true
-    name: ${VON_NETWORK_NAME}
-
 services:
-  issuer_employer:
+  issuer_government:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
+    ports:
+      - "8031:8031"
+      - "8032:8032"
     environment:
       - RUST_LOG=warning
+    entrypoint: >
+      aca-py start
+        --inbound-transport http 0.0.0.0 8031
+        --outbound-transport http
+        --admin 0.0.0.0 8032
+        --admin-insecure-mode
+        --wallet-type askar
+        --wallet-name government_wallet
+        --wallet-key pass-government
+        --seed "gov_agent_seed_32_characters_01"
+        --genesis-file /home/indy/genesis.txn
+        --endpoint http://issuer_government:8031
+        --auto-provision
+
+  issuer_employer:
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
     ports:
       - "8021:8021"
       - "8022:8022"
-    volumes:
-      - ./agents/issuer_employer:/home/indy/wallet
-      - ./genesis.txn:/home/indy/genesis.txn
-    networks:
-      - von_net
+    environment:
+      - RUST_LOG=warning
     entrypoint: >
       aca-py start
         --inbound-transport http 0.0.0.0 8021
@@ -25,47 +36,18 @@ services:
         --wallet-type askar
         --wallet-name employer_wallet
         --wallet-key pass-employer
+        --seed "emp_agent_seed_32_characters_02"
         --genesis-file /home/indy/genesis.txn
         --endpoint http://issuer_employer:8021
         --auto-provision
 
-  issuer_government:
-    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
-    environment:
-      - RUST_LOG=warning
-    ports:
-      - "8031:8031"
-      - "8032:8032"
-    volumes:
-      - ./agents/issuer_government-agency:/home/indy/wallet
-      - ./genesis.txn:/home/indy/genesis.txn
-    networks:
-      - von_net
-    entrypoint: >
-      aca-py start
-        --inbound-transport http 0.0.0.0 8031
-        --outbound-transport http
-        --admin 0.0.0.0 8032
-        --admin-insecure-mode
-        --wallet-type askar
-        --wallet-name government-agency_wallet
-        --wallet-key pass-government-agency
-        --genesis-file /home/indy/genesis.txn
-        --endpoint http://issuer_government:8031
-        --auto-provision
-
   holder_tenant:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
-    environment:
-      - RUST_LOG=warning
     ports:
       - "8041:8041"
       - "8042:8042"
-    volumes:
-      - ./agents/holder_tenant:/home/indy/wallet
-      - ./genesis.txn:/home/indy/genesis.txn
-    networks:
-      - von_net
+    environment:
+      - RUST_LOG=warning
     entrypoint: >
       aca-py start
         --inbound-transport http 0.0.0.0 8041
@@ -81,16 +63,11 @@ services:
 
   verifier_landlord:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
-    environment:
-      - RUST_LOG=warning
     ports:
       - "8051:8051"
       - "8052:8052"
-    volumes:
-      - ./agents/verifier_landlord:/home/indy/wallet
-      - ./genesis.txn:/home/indy/genesis.txn
-    networks:
-      - von_net
+    environment:
+      - RUST_LOG=warning
     entrypoint: >
       aca-py start
         --inbound-transport http 0.0.0.0 8051

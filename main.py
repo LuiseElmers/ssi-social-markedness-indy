@@ -1,5 +1,6 @@
-import subprocess
 import os
+import subprocess
+import time
 
 # 1. Search for networks that contain the word "von"
 try:
@@ -26,3 +27,11 @@ with open(".env", "w") as f:
 
 # 4. Start Docker Compose
 subprocess.run(["docker", "compose", "up", "-d"], check=True)
+
+# Give containers a few seconds to fully initialize their services & admin APIs
+print("Waiting for agents to initialize (10s)...")
+time.sleep(10)
+
+# 5. Run Step 1: Ledger Registration via setup_schemas_and_connections.py
+subprocess.run(["python3", "scripts/setup_schemas_and_connections.py"], check=True)
+
