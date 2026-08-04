@@ -18,7 +18,7 @@ def register_did(seed, role="ENDORSER", agent_name="agent"):
     try:
         response = requests.post(LEDGER_REGISTER_URL, json=payload)
         if response.status_code == 200:
-            print(f"-> Successfully registered {agent_name} on ledger!")
+            print(f"-> Successfully registered {agent_name} on ledger.")
             return True
         else:
             print(f"-> Error registering {agent_name}: {response.text}")
@@ -46,7 +46,7 @@ def run_setup():
         time.sleep(2)  # Wait for ledger processing
         print("\n--- Ledger registration completed, a DID for all four agents was derived ---")
     else:
-        print("\n--- ERROR: Not all agents could be registered successfully! ---")
+        print("\n--- ERROR: Not all agents could be registered successfully. ---")
 
 
 if __name__ == "__main__":
