@@ -4,14 +4,14 @@ import requests
 # Endpoint configuration
 LEDGER_REGISTER_URL = "http://192.168.64.6:9000/register"
 
-# Seeds matching docker-compose.yml  32 characters for each agent)
+# Seeds matching docker-compose.yml  (32 characters for each agent)
 GOV_SEED = "gov_agent_seed_32_characters_01!"
 EMP_SEED = "emp_agent_seed_32_characters_02!"
 TENANT_SEED = "tenant_agent_seed_32_characters0"
 LANDLORD_SEED = "landlord_agent_seed_32_chars0040"
 
 def register_did(seed, role="ENDORSER", agent_name="agent"):
-    """Register an agent seed on the ledger. Returns True on success, False otherwise."""
+    """Register an agent seed on the ledger. Returns True on success."""
     payload = {"seed": seed, "role": role}
     print(f"Registering seed for {agent_name} agent on ledger...")
     

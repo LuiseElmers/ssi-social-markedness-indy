@@ -1,3 +1,8 @@
+networks:
+  von_net:
+    external: true
+    name: ${VON_NETWORK_NAME}
+
 services:
   issuer_government:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
@@ -6,6 +11,12 @@ services:
       - "8032:8032"
     environment:
       - RUST_LOG=warning
+    user: "0:0"
+    volumes:
+      - gov_wallet_data:/home/aries/.acapy_agent/wallet
+      - ./genesis.txn:/home/aries/genesis.txn
+    networks:
+      - von_net
     entrypoint: >
       aca-py start
         --inbound-transport http 0.0.0.0 8031
@@ -15,8 +26,8 @@ services:
         --wallet-type askar
         --wallet-name government_wallet
         --wallet-key pass-government
-        --seed "gov_agent_seed_32_characters_01"
-        --genesis-file /home/indy/genesis.txn
+        --seed "gov_agent_seed_32_characters_01!"
+        --genesis-file /home/aries/genesis.txn
         --endpoint http://issuer_government:8031
         --auto-provision
 
@@ -27,6 +38,12 @@ services:
       - "8022:8022"
     environment:
       - RUST_LOG=warning
+    user: "0:0"
+    volumes:
+      - emp_wallet_data:/home/aries/.acapy_agent/wallet
+      - ./genesis.txn:/home/aries/genesis.txn
+    networks:
+      - von_net
     entrypoint: >
       aca-py start
         --inbound-transport http 0.0.0.0 8021
@@ -36,8 +53,8 @@ services:
         --wallet-type askar
         --wallet-name employer_wallet
         --wallet-key pass-employer
-        --seed "emp_agent_seed_32_characters_02"
-        --genesis-file /home/indy/genesis.txn
+        --seed "emp_agent_seed_32_characters_02!"
+        --genesis-file /home/aries/genesis.txn
         --endpoint http://issuer_employer:8021
         --auto-provision
 
@@ -48,6 +65,12 @@ services:
       - "8042:8042"
     environment:
       - RUST_LOG=warning
+    user: "0:0"
+    volumes:
+      - tenant_wallet_data:/home/aries/.acapy_agent/wallet
+      - ./genesis.txn:/home/aries/genesis.txn
+    networks:
+      - von_net
     entrypoint: >
       aca-py start
         --inbound-transport http 0.0.0.0 8041
@@ -57,7 +80,8 @@ services:
         --wallet-type askar
         --wallet-name tenant_wallet
         --wallet-key pass-tenant
-        --genesis-file /home/indy/genesis.txn
+        --seed "tenant_agent_seed_32_characters0"
+        --genesis-file /home/aries/genesis.txn
         --endpoint http://holder_tenant:8041
         --auto-provision
 
@@ -68,6 +92,12 @@ services:
       - "8052:8052"
     environment:
       - RUST_LOG=warning
+    user: "0:0"
+    volumes:
+      - landlord_wallet_data:/home/aries/.acapy_agent/wallet
+      - ./genesis.txn:/home/aries/genesis.txn
+    networks:
+      - von_net
     entrypoint: >
       aca-py start
         --inbound-transport http 0.0.0.0 8051
@@ -77,6 +107,13 @@ services:
         --wallet-type askar
         --wallet-name landlord_wallet
         --wallet-key pass-landlord
-        --genesis-file /home/indy/genesis.txn
+        --seed "landlord_agent_seed_32_chars0040"
+        --genesis-file /home/aries/genesis.txn
         --endpoint http://verifier_landlord:8051
         --auto-provision
+
+volumes:
+  gov_wallet_data:
+  emp_wallet_data:
+  tenant_wallet_data:
+  landlord_wallet_data:
