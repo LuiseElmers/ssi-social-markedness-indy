@@ -4,7 +4,7 @@ import requests
 # Endpoint configuration
 LEDGER_REGISTER_URL = "http://192.168.64.6:9000/register"
 
-# Seeds matching docker-compose.yml  (32 characters for each agent)
+# Seeds taken out of docker-compose.yml  (32 characters for each agent)
 GOV_SEED = "gov_agent_seed_32_characters_01!"
 EMP_SEED = "emp_agent_seed_32_characters_02!"
 TENANT_SEED = "tenant_agent_seed_32_characters0"
@@ -46,7 +46,7 @@ def run_setup():
         time.sleep(2)  # Wait for ledger processing
         print("\n--- Ledger registration completed, a DID for all four agents was derived ---")
     else:
-        print("\n--- ERROR: Not all agents could be registered successfully. ---")
+        print("\n--- ERROR: Not all agents could be set up. ---")
 
 
 if __name__ == "__main__":
