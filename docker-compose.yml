@@ -5,7 +5,7 @@ networks:
 
 services:
   issuer_government:
-    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     ports:
       - "8031:8031"
       - "8032:8032"
@@ -17,7 +17,7 @@ services:
       - ./genesis.txn:/home/aries/genesis.txn
     networks:
       - von_net
-    entrypoint: >
+    entrypoint:
       aca-py start
         --inbound-transport http 0.0.0.0 8031
         --outbound-transport http
@@ -31,8 +31,9 @@ services:
         --endpoint http://issuer_government:8031
         --auto-provision
 
+
   issuer_employer:
-    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     ports:
       - "8021:8021"
       - "8022:8022"
@@ -44,7 +45,7 @@ services:
       - ./genesis.txn:/home/aries/genesis.txn
     networks:
       - von_net
-    entrypoint: >
+    entrypoint:
       aca-py start
         --inbound-transport http 0.0.0.0 8021
         --outbound-transport http
@@ -59,7 +60,7 @@ services:
         --auto-provision
 
   holder_tenant:
-    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     ports:
       - "8041:8041"
       - "8042:8042"
@@ -71,7 +72,7 @@ services:
       - ./genesis.txn:/home/aries/genesis.txn
     networks:
       - von_net
-    entrypoint: >
+    entrypoint:
       aca-py start
         --inbound-transport http 0.0.0.0 8041
         --outbound-transport http
@@ -86,7 +87,7 @@ services:
         --auto-provision
 
   verifier_landlord:
-    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-nightly-2026-07-30
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     ports:
       - "8051:8051"
       - "8052:8052"
@@ -98,7 +99,7 @@ services:
       - ./genesis.txn:/home/aries/genesis.txn
     networks:
       - von_net
-    entrypoint: >
+    entrypoint:
       aca-py start
         --inbound-transport http 0.0.0.0 8051
         --outbound-transport http

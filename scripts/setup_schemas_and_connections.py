@@ -19,6 +19,18 @@ class AgentController:
     def __init__(self, base_url):
         self.base_url = base_url.rstrip("/")
         self.headers = {"Content-Type": "application/json"}
+        
+        for _ in range(30):
+            try:
+                res = requests.get(f"{self.base_url}/status", timeout=2)
+                if res.status_code == 200:
+                    break
+            except Exception:
+                pass
+            time.sleep(1.5)
+        else:
+            raise ConnectionError(f"Agent at {self.base_url} did not become ready in time.")
+    
 
     def create_invitation(self, alias=""):
         # Create an out-of-band invitation
@@ -74,7 +86,7 @@ class AgentController:
         )
         res.raise_for_status()
         schema_id = res.json().get("schema_id")
-        print(f"Schema created successfully. ID: {schema_id}")
+        print(f"Schema created. ID: {schema_id}")
         return schema_id
     
     
@@ -107,12 +119,12 @@ class AgentController:
             )
             res.raise_for_status()
             cred_def_id = res.json().get("credential_definition_id")
-            print(f"Successfully created Credential definition. ID: {cred_def_id}")
+            print(f"Credential definition was created. ID: {cred_def_id}")
             return cred_def_id
             
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400 and "is on ledger" in e.response.text:
-                print(f"[!] Credential definition for tag '{tag}' already exists on ledger. Recovering ID...")
+                print(f"Credential definition for tag '{tag}' already exists on ledger. Recovering ID...")
            
                 error_text = e.response.text
                 parts = error_text.split()
@@ -125,25 +137,48 @@ class AgentController:
                 raise e 
             else:
                 raise e
+            
+def _write_to_env(key, value):
+        env_path = ".env"
+        lines = []
+        
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                lines = f.readlines()
+                
+        key_found = False
+        new_lines = []
+        for line in lines:
+            if line.startswith(f"{key}="):
+                new_lines.append(f"{key}={value}\n")
+                key_found = True
+            else:
+                new_lines.append(line)
+                
+        if not key_found:
+            new_lines.append(f"{key}={value}\n")
+            
+        with open(env_path, "w") as f:
+            f.writelines(new_lines)   
 
 
 def establish_connection(issuer_name, issuer_client, holder_name, holder_client):
     print(f"\n--- Connecting {holder_name} with {issuer_name} ---")
     
-    # 1. Issuer creates invite, holder receives it
+    # Issuer creates invite, holder receives it
     inv = issuer_client.create_invitation(alias=f"Invite for {holder_name}")
     rec = holder_client.receive_invitation(inv["invitation"])
     
     time.sleep(2)
     
-    # 2. Read out IDs
+    # Read out IDs
     issuer_conn_id = inv.get("oob_id") or inv.get("connection_id")
     holder_conn_id = rec.get("connection_id")
     
     if not issuer_conn_id or not holder_conn_id:
         raise ValueError(f"Could not retrieve connection/oob IDs for {holder_name} and {issuer_name}.")
 
-    # 3. Accept connection on both sides
+    # Accept connection on both sides
     holder_client.accept_did_exchange(holder_conn_id)
     issuer_client.accept_did_exchange(issuer_conn_id)
     
@@ -153,6 +188,7 @@ def establish_connection(issuer_name, issuer_client, holder_name, holder_client)
 
 def run():
     """Run schema and connection setup."""
+
     gov = AgentController(AGENTS["government"])
     tenant = AgentController(AGENTS["tenant"])
     employer = AgentController(AGENTS["employer"])
@@ -179,15 +215,17 @@ def run():
     ]
     
     # Register schemas and credential definitions on the ledger
-    print("\n--- Registering Government Schema & Cred Def ---")
     gov_schema_id = gov.create_schema("digital_id_schema", "1.0", gov_attributes)
-    gov.create_credential_definition(gov_schema_id, tag="gov-default")
+    gov_cred_def_id = gov.create_credential_definition(gov_schema_id, tag="gov-default")
     time.sleep(2)
     
     print("\n--- Registering Employer Schema & Cred Def ---")
     emp_schema_id = employer.create_schema("employment_schema", "1.0", employer_attributes)
-    employer.create_credential_definition(emp_schema_id, tag="emp-default")
+    emp_cred_def_id = employer.create_credential_definition(emp_schema_id, tag="emp-default")
     time.sleep(2)
+    
+    _write_to_env("GOV_CRED_DEF_ID", gov_cred_def_id)
+    _write_to_env("EMPLOYMENT_CRED_DEF_ID", emp_cred_def_id)
 
     # Establish necessary connections
     establish_connection("Government", gov, "Tenant", tenant)
