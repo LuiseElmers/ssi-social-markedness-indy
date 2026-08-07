@@ -1,19 +1,25 @@
-# main.py
+"""Start the SSI rental-application prototype."""
+
+import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
-from scripts.setup_infrastructure import SystemInitializer
-from scripts import menu
+from scripts.aca_client import ACAClientError
+from scripts.menu import run_main_menu
+from scripts.setup_infrastructure import run_full_initialization
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
 
 def main():
-    # 1. Load environment variables from .env if they exist
     load_dotenv()
-    
-    # 2. Run the full system infrastructure and agent setup
-    initializer = SystemInitializer()
-    initializer.run_full_initialization()
-    
-    # 3. Start the CLI main menu
-    menu.run_main_menu()
+    try:
+        run_full_initialization()
+    except ACAClientError as error:
+        print(f"Initialization failed: {error}")
+        return
+
+    run_main_menu()
+
 
 if __name__ == "__main__":
     main()

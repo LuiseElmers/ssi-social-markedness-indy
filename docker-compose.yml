@@ -30,7 +30,7 @@ services:
         --genesis-file /home/aries/genesis.txn
         --endpoint http://issuer_government:8031
         --auto-provision
-
+        --log-level debug
 
   issuer_employer:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
@@ -58,6 +58,7 @@ services:
         --genesis-file /home/aries/genesis.txn
         --endpoint http://issuer_employer:8021
         --auto-provision
+        --log-level debug
 
   holder_tenant:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
@@ -85,6 +86,7 @@ services:
         --genesis-file /home/aries/genesis.txn
         --endpoint http://holder_tenant:8041
         --auto-provision
+        --log-level debug
 
   verifier_landlord:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
@@ -112,6 +114,7 @@ services:
         --genesis-file /home/aries/genesis.txn
         --endpoint http://verifier_landlord:8051
         --auto-provision
+        --log-level debug
 
 volumes:
   gov_wallet_data:
