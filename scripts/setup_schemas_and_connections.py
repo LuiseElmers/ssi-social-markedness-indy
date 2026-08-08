@@ -2,8 +2,8 @@
 
 import time
 
-from scripts.aca_client import ACAClient, ACAClientError
-from scripts.config import (
+from aca_client import ACAClient, ACAClientError
+from config import (
     CHECK_INTERVAL,
     EMPLOYER_URL,
     EMPLOYMENT_SCHEMA,

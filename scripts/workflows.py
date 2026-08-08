@@ -1,7 +1,7 @@
 """SSI workflows used by the console menu."""
 
-from scripts.aca_client import ACAClient, ACAClientError
-from scripts.config import EMPLOYER_URL, GOVERNMENT_URL, LANDLORD_URL, TENANT_URL
+from aca_client import ACAClient, ACAClientError
+from config import EMPLOYER_URL, GOVERNMENT_URL, LANDLORD_URL, TENANT_URL
 from scripts.state_store import load_state
 
 

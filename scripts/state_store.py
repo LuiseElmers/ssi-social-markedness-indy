@@ -2,7 +2,7 @@
 
 import json
 
-from scripts.config import STATE_FILE
+from config import STATE_FILE
 
 
 def load_state():

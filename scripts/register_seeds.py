@@ -4,8 +4,8 @@ import time
 
 import requests
 
-from scripts.aca_client import ACAClientError
-from scripts.config import (
+from aca_client import ACAClientError
+from config import (
     CHECK_INTERVAL,
     EMPLOYER_SEED,
     GOVERNMENT_SEED,

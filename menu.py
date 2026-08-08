@@ -1,7 +1,7 @@
 """Console menus for the SSI rental-application prototype."""
 
 from aca_client import ACAClientError
-from workflows import check_wallet, generate_proof, issue_employment_credential, issue_government_id, show_landlord_proof_request
+from scripts.workflows import check_wallet, generate_proof, issue_employment_credential, issue_government_id, show_landlord_proof_request
 
 
 def run_action(action):
