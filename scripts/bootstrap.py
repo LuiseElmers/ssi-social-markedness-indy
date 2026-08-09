@@ -28,7 +28,7 @@ def get_id(response, key):
 
 
 def ensure_schema(client, schema):
-    """Return the schema (ID and ledger sequence number), creating it if needed.
+    """Return the schema ID, creating the schema on the ledger if needed.
 
     The schema ID is fixed by the issuer DID, name and version, so we can
     check the ledger for it directly instead of trusting the wallet's own
@@ -40,7 +40,7 @@ def ensure_schema(client, schema):
     ledger_schema = client.fetch_schema(schema_id)
 
     if ledger_schema:
-        existing = sorted(ledger_schema["attr_names"])
+        existing = sorted(ledger_schema.get("attrNames", []))
         wanted = sorted(schema["attributes"])
 
         if existing != wanted:
@@ -49,103 +49,80 @@ def ensure_schema(client, schema):
                 f"attributes ({existing}) than requested ({wanted})."
             )
 
-        return schema_id, ledger_schema["seq_no"]
+        return schema_id
 
     print(f"Creating schema: {schema['name']} {schema['version']}")
 
-    response = client.create_schema(schema)
-    created_schema_id = get_id(response, "schema_id")
-
-    # The credential definition ID needs the schema's sequence number, so
-    # read it back from the ledger.
-    ledger_schema = client.fetch_schema(created_schema_id)
-
-    if not ledger_schema or not ledger_schema["seq_no"]:
-        raise ACAClientError(
-            f"Could not read back schema {created_schema_id} from the ledger."
-        )
-
-    return created_schema_id, ledger_schema["seq_no"]
+    response = client.create_schema(public_did, schema)
+    return response["schema_state"]["schema_id"]
 
 
-def ensure_credential_definition(client, schema_id, schema_seq_no, cached_id=None, tag="default"):
+def ensure_credential_definition(client, schema_id, cached_id=None, base_tag="default"):
     """Return a usable credential definition ID, creating one if needed.
 
     Checks the cached ID from state.json first. If this wallet still has
-    it, that's immediately the answer -- no need to guess a tag or search
-    for a free one. Without a usable cached ID, the same three cases as
-    before apply:
-      - the wallet already knows the "default" tag: reuse it,
-      - only the ledger knows it (key lost after a wallet reset): make a
-        new one under a fresh tag,
-      - nobody knows it: make it.
+    it, that's immediately the answer. Otherwise look through what the
+    wallet already created for one that matches this schema. If nothing
+    usable is found, create a new one -- trying a fresh tag if the first
+    one is already taken by a credential definition this wallet no longer
+    holds the signing key for (e.g. after a wallet reset).
     """
     if cached_id and cached_id in client.created_credential_definitions():
         return cached_id
 
+    for cred_def_id in client.created_credential_definitions():
+        details = client.fetch_credential_definition(cred_def_id)
+
+        if details and details.get("schemaId") == schema_id:
+            return cred_def_id
+
     public_did = client.get_public_did()
-    candidate_id = f"{public_did}:3:CL:{schema_seq_no}:{tag}"
-
-    if candidate_id in client.created_credential_definitions():
-        return candidate_id
-
-    if client.fetch_credential_definition(candidate_id) is None:
-        return create_cred_def(client, schema_id, tag, public_did, schema_seq_no)
-
-    tag = next_free_tag(client, public_did, schema_seq_no, tag)
-    return create_cred_def(client, schema_id, tag, public_did, schema_seq_no)
+    return create_cred_def(client, public_did, schema_id, base_tag)
 
 
-def create_cred_def(client, schema_id, tag, public_did, schema_seq_no):
-    """Create a credential definition and return its ID.
+def create_cred_def(client, public_did, schema_id, base_tag):
+    """Create a credential definition, retrying under a new tag if needed.
 
     The ledger write can outlast the HTTP read timeout even though the
-    agent finishes it. If that happens, we wait and check whether the
-    definition showed up before giving up.
+    agent finishes it. If that happens, check whether it actually landed
+    before giving up. A tag can also simply already be taken by an old,
+    now-inaccessible credential definition (e.g. after a wallet reset) --
+    in that case the create call fails outright, so just try the next tag.
     """
-    print("Creating credential definition (this can take a moment) ...")
-    expected_id = f"{public_did}:3:CL:{schema_seq_no}:{tag}"
+    tag = base_tag
+    attempt = 1
 
-    try:
-        response = client.create_credential_definition(schema_id, tag=tag)
-        return get_id(response, "credential_definition_id")
-    except ACATimeoutError:
-        cred_def_id = wait_for_cred_def(client, expected_id)
-        if cred_def_id:
-            return cred_def_id
-        raise
+    while True:
+        print("Creating credential definition (this can take a moment) ...")
+
+        try:
+            response = client.create_credential_definition(public_did, schema_id, tag)
+            return response["credential_definition_state"]["credential_definition_id"]
+        except ACATimeoutError:
+            cred_def_id = wait_for_cred_def(client, schema_id)
+            if cred_def_id:
+                return cred_def_id
+            raise
+        except ACAClientError:
+            attempt += 1
+            if attempt > 20:
+                raise
+            tag = f"{base_tag}-{attempt}"
 
 
-def wait_for_cred_def(client, cred_def_id):
-    """Wait for a credential definition to appear in the wallet, or None."""
+def wait_for_cred_def(client, schema_id):
+    """Wait for a credential definition for this schema to show up, or None."""
     start = time.time()
 
     while time.time() - start < WAIT_SECONDS:
-        if cred_def_id in client.created_credential_definitions():
-            return cred_def_id
+        for cred_def_id in client.created_credential_definitions():
+            details = client.fetch_credential_definition(cred_def_id)
+            if details and details.get("schemaId") == schema_id:
+                return cred_def_id
+
         time.sleep(CHECK_INTERVAL)
 
     return None
-
-
-def next_free_tag(client, public_did, schema_seq_no, base_tag):
-    """Find a tag that is not used yet in the wallet or on the ledger."""
-    wallet_cred_defs = client.created_credential_definitions()
-    number = 2
-
-    while True:
-        tag = f"{base_tag}-{number}"
-        cred_def_id = f"{public_did}:3:CL:{schema_seq_no}:{tag}"
-
-        if cred_def_id in wallet_cred_defs:
-            number += 1
-            continue
-
-        if client.fetch_credential_definition(cred_def_id) is not None:
-            number += 1
-            continue
-
-        return tag
 
 
 def wait_for_issuer_connection(issuer, invi_msg_id):
@@ -265,7 +242,7 @@ def bootstrap():
     # part stays sequential; see setup_infrastructure.py for where
     # parallelism actually helps.
 
-    government_schema_id, government_seq_no = ensure_schema(
+    government_schema_id = ensure_schema(
         government,
         GOVERNMENT_ID_SCHEMA,
     )
@@ -273,7 +250,6 @@ def bootstrap():
     government_cred_def_id = ensure_credential_definition(
         government,
         government_schema_id,
-        government_seq_no,
         state.get("government_cred_def_id"),
     )
 
@@ -283,7 +259,7 @@ def bootstrap():
 
     print("Government credential definition ready.")
 
-    employment_schema_id, employment_seq_no = ensure_schema(
+    employment_schema_id = ensure_schema(
         employer,
         EMPLOYMENT_SCHEMA,
     )
@@ -291,7 +267,6 @@ def bootstrap():
     employment_cred_def_id = ensure_credential_definition(
         employer,
         employment_schema_id,
-        employment_seq_no,
         state.get("employment_cred_def_id"),
     )
 

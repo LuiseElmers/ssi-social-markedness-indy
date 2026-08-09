@@ -1,18 +1,18 @@
 {
   "government_schema_id": "WJM7MmqjX36DQ739cg8g2U:2:GovernmentID:1.0",
-  "government_cred_def_id": "WJM7MmqjX36DQ739cg8g2U:3:CL:23:default-13",
+  "government_cred_def_id": "WJM7MmqjX36DQ739cg8g2U:3:CL:10:default",
   "employment_schema_id": "RWbn4BPP7JEqTBzQ2Gcx1r:2:EmploymentCredential:1.0",
-  "employment_cred_def_id": "RWbn4BPP7JEqTBzQ2Gcx1r:3:CL:27:default-11",
+  "employment_cred_def_id": "RWbn4BPP7JEqTBzQ2Gcx1r:3:CL:12:default",
   "government_tenant": {
-    "issuer": "722fc826-2bb1-4ec5-ad88-61dbf393fbc4",
-    "tenant": "a1061cb4-b634-481e-8620-6c452b792028"
+    "issuer": "618537d6-ed44-4153-a1cf-6174cac47e57",
+    "tenant": "b2dcab3c-f2d8-4c15-8acb-31bc31e6282b"
   },
   "employer_tenant": {
-    "issuer": "a9fe1abe-e9aa-4954-b0ce-dcc0329212db",
-    "tenant": "d8fe2943-fd80-4ae6-be48-e1a2cae48888"
+    "issuer": "08c990ee-4917-4781-abdf-e50176a65def",
+    "tenant": "d342f302-3df8-4886-abae-0f3282ca6d29"
   },
   "landlord_tenant": {
-    "issuer": "57859ca8-c7ee-46e0-9b42-cafe2744102e",
-    "tenant": "ba4bb352-163f-4963-84d2-dbf434fc7a8e"
+    "issuer": "bf5b3812-2989-4c9a-8dd5-7d18c45334da",
+    "tenant": "2d584361-89d0-476a-ab6c-990e72c33b13"
   }
 }

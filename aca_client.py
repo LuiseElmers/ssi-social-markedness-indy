@@ -234,6 +234,10 @@ class ACAClient:
         return did
 
     # Schemas
+    #
+    # These use the /anoncreds endpoints (ACA-Py's askar-anoncreds wallet
+    # type), not the older /schemas endpoints from plain askar. See:
+    # https://aca-py.org/latest/deploying/AnonCredsControllerMigration/
 
     def created_schemas(self):
         """Return schema IDs this agent's own wallet created.
@@ -241,37 +245,29 @@ class ACAClient:
         This is not the same as what's on the ledger; use fetch_schema()
         to check the ledger directly.
         """
-        response = self.get("/schemas/created")
+        response = self.get("/anoncreds/schemas")
         return response.get("schema_ids", [])
 
     def fetch_schema(self, schema_id):
         """Return the schema from the ledger, or None if it isn't there."""
         try:
-            response = self.get(f"/schemas/{schema_id}")
+            response = self.get(f"/anoncreds/schema/{schema_id}")
         except ACAClientError:
             return None
 
-        schema = response.get("schema") or {}
+        return response.get("schema") or None
 
-        if not schema:
-            return None
-
-        return {
-            "schema_id": schema_id,
-            "seq_no": response.get("seqNo", schema.get("seqNo")),
-            "attr_names": schema.get("attrNames", []),
-            "name": schema.get("name"),
-            "version": schema.get("version"),
-        }
-
-    def create_schema(self, schema):
+    def create_schema(self, public_did, schema):
         """Create an Indy schema on the ledger."""
         return self.post(
-            "/schemas",
+            "/anoncreds/schema",
             body={
-                "schema_name": schema["name"],
-                "schema_version": schema["version"],
-                "attributes": schema["attributes"],
+                "schema": {
+                    "issuerId": public_did,
+                    "attrNames": schema["attributes"],
+                    "name": schema["name"],
+                    "version": schema["version"],
+                },
             },
             timeout=LEDGER_WRITE_TIMEOUT,
         )
@@ -284,7 +280,7 @@ class ACAClient:
         Like created_schemas(), this is the wallet's own list, not the
         ledger's. Use fetch_credential_definition() for the ledger.
         """
-        response = self.get("/credential-definitions/created")
+        response = self.get("/anoncreds/credential-definitions")
         return response.get("credential_definition_ids", [])
 
     def fetch_credential_definition(self, cred_def_id):
@@ -296,20 +292,22 @@ class ACAClient:
         longer sign with.
         """
         try:
-            response = self.get(f"/credential-definitions/{cred_def_id}")
+            response = self.get(f"/anoncreds/credential-definition/{cred_def_id}")
         except ACAClientError:
             return None
 
         return response.get("credential_definition") or None
 
-    def create_credential_definition(self, schema_id, tag="default"):
+    def create_credential_definition(self, public_did, schema_id, tag="default"):
         """Create an Indy credential definition."""
         return self.post(
-            "/credential-definitions",
+            "/anoncreds/credential-definition",
             body={
-                "schema_id": schema_id,
-                "tag": tag,
-                "support_revocation": False,
+                "credential_definition": {
+                    "issuerId": public_did,
+                    "schemaId": schema_id,
+                    "tag": tag,
+                },
             },
             timeout=LEDGER_WRITE_TIMEOUT,
         )

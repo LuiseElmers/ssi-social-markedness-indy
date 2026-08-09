@@ -119,11 +119,12 @@ def wait_for_all_agents():
 def run_full_initialization():
     """Run the startup steps in the correct order.
 
-    Agent readiness and DID registration were tried in parallel to speed
-    this up, but on this emulated setup that made things slower instead:
-    von-network's own containers and the ACA-Py containers' internal
-    wallet upgrade ended up competing for the same limited CPU. Plain
-    sequential order turned out to be the more reliable choice here.
+    Registering the issuer DIDs has to happen before the containers even
+    start, not after: with a --seed (and no --wallet-local-did), ACA-Py
+    treats the DID as public and tries to publish its own endpoint to the
+    ledger right at startup, which fails if that DID isn't registered on
+    the ledger yet. This step only talks to von-network directly, not to
+    the agents, so it doesn't need them running anyway.
 
     Each step is timed and the breakdown is printed at the end, so a slow
     run shows exactly which step ate the time instead of leaving that to
@@ -131,9 +132,9 @@ def run_full_initialization():
     """
     steps = [
         ("Checking von-network", check_von_network),
+        ("Registering issuer DIDs", register_issuer_seeds),
         ("Starting containers", start_containers),
         ("Waiting for agents", wait_for_all_agents),
-        ("Registering issuer DIDs", register_issuer_seeds),
         ("Bootstrap (schemas, cred defs, connections)", bootstrap),
     ]
 
