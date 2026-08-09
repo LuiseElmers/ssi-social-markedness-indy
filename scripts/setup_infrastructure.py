@@ -1,12 +1,19 @@
 """Start the ACA-Py containers and initialize the SSI infrastructure."""
 
 import subprocess
+import threading
 import time
 
 from aca_client import ACAClient, ACAClientError
-from config import AGENT_URLS, CHECK_INTERVAL, VON_NETWORK_NAME, WAIT_SECONDS
+from config import (
+    AGENT_READY_TIMEOUT,
+    AGENT_URLS,
+    CHECK_INTERVAL,
+    COMPOSE_UP_TIMEOUT,
+    VON_NETWORK_NAME,
+)
 from scripts.register_seeds import register_issuer_seeds
-from scripts.setup_schemas_and_connections import bootstrap
+from scripts.bootstrap import bootstrap
 
 
 SERVICES = [
@@ -43,26 +50,60 @@ def start_containers():
         subprocess.run(
             ["docker", "compose", "up", "-d", *SERVICES],
             check=True,
+            timeout=COMPOSE_UP_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        raise ACAClientError(
+            "'docker compose up' did not finish within "
+            f"{COMPOSE_UP_TIMEOUT} seconds. The Docker daemon may be busy "
+            "or stuck; check 'docker compose ps' and try again."
         )
     except subprocess.CalledProcessError:
         raise ACAClientError("Docker Compose could not start the ACA-Py containers.")
 
 
+def check_one_agent(agent, name, ready):
+    """Check one agent's /status and record the result under its name.
+
+    Runs in its own thread so the four agents can be checked at the same
+    time instead of one after another. This is a cheap, read-only call
+    (not the CPU-heavy credential definition work), so checking all four
+    at once doesn't compete for resources the way that did.
+    """
+    ready[name] = agent.is_ready()
+
+
 def wait_for_all_agents():
     """Wait until all four ACA-Py Admin APIs are reachable."""
-    print("Waiting for ACA-Py agents ...")
+    print("Waiting for ACA-Py agents (this can take a while on first start) ...")
 
     start = time.time()
+    announced = set()
 
-    while time.time() - start < WAIT_SECONDS:
-        all_ready = True
+    while time.time() - start < AGENT_READY_TIMEOUT:
+        ready = {}
+        threads = []
 
         for name, url in AGENT_URLS.items():
             agent = ACAClient(name, url)
+            thread = threading.Thread(target=check_one_agent, args=(agent, name, ready))
+            threads.append(thread)
+            thread.start()
 
-            if not agent.is_ready():
+        for thread in threads:
+            thread.join()
+
+        all_ready = True
+
+        for name in AGENT_URLS:
+            if ready.get(name):
+                continue
+
+            all_ready = False
+
+            if name not in announced:
                 print(f"Waiting for {name} ...")
-                all_ready = False
+                announced.add(name)
 
         if all_ready:
             print("All ACA-Py agents are ready.")
@@ -76,12 +117,36 @@ def wait_for_all_agents():
 
 
 def run_full_initialization():
-    """Run the startup steps in the correct order."""
-    check_von_network()
-    start_containers()
-    wait_for_all_agents()
-    register_issuer_seeds()
-    bootstrap()
+    """Run the startup steps in the correct order.
+
+    Agent readiness and DID registration were tried in parallel to speed
+    this up, but on this emulated setup that made things slower instead:
+    von-network's own containers and the ACA-Py containers' internal
+    wallet upgrade ended up competing for the same limited CPU. Plain
+    sequential order turned out to be the more reliable choice here.
+
+    Each step is timed and the breakdown is printed at the end, so a slow
+    run shows exactly which step ate the time instead of leaving that to
+    guesswork from the docker logs.
+    """
+    steps = [
+        ("Checking von-network", check_von_network),
+        ("Starting containers", start_containers),
+        ("Waiting for agents", wait_for_all_agents),
+        ("Registering issuer DIDs", register_issuer_seeds),
+        ("Bootstrap (schemas, cred defs, connections)", bootstrap),
+    ]
+
+    timings = []
+
+    for label, step in steps:
+        start = time.time()
+        step()
+        timings.append((label, time.time() - start))
+
+    print("\nSetup step timings:")
+    for label, elapsed in timings:
+        print(f"  {label}: {elapsed:.1f}s")
 
 
 if __name__ == "__main__":

@@ -11,24 +11,36 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def get_env(name, default):
+    """
+    Read environment variable.
+    Use default when value is missing or empty.
+    """
+    value = os.getenv(name)
+
+    if value is None or value.strip() == "":
+        return default
+
+    return value
+
 # ACA-Py Admin APIs
 
-GOVERNMENT_URL = os.getenv(
+GOVERNMENT_URL = get_env(
     "GOVERNMENT_URL",
     "http://localhost:8032",
 )
 
-EMPLOYER_URL = os.getenv(
+EMPLOYER_URL = get_env(
     "EMPLOYER_URL",
     "http://localhost:8022",
 )
 
-TENANT_URL = os.getenv(
+TENANT_URL = get_env(
     "TENANT_URL",
     "http://localhost:8042",
 )
 
-LANDLORD_URL = os.getenv(
+LANDLORD_URL = get_env(
     "LANDLORD_URL",
     "http://localhost:8052",
 )
@@ -77,6 +89,22 @@ LANDLORD_SEED = os.getenv(
 # Runtime settings
 
 REQUEST_TIMEOUT = 10
+
+# Writing a schema or credential definition to the Indy ledger is slow,
+# especially the first ones after a fresh start, so they get more time.
+LEDGER_WRITE_TIMEOUT = 120
+
+# On a cold start each agent provisions its wallet and may run an internal
+# upgrade before its Admin API answers. With four agents at once this can
+# take a few minutes.
+AGENT_READY_TIMEOUT = 300
+
+# Upper bound for "docker compose up" so a stuck daemon can't hang forever.
+# On slower or emulated hosts, plain container startup (before any agent
+# work even begins) has been observed to take well over four minutes, so
+# this needs real headroom above that, not just above a typical run.
+COMPOSE_UP_TIMEOUT = 400
+
 WAIT_SECONDS = 60
 CHECK_INTERVAL = 2
 

@@ -5,6 +5,27 @@ from config import EMPLOYER_URL, GOVERNMENT_URL, LANDLORD_URL, TENANT_URL
 from scripts.state_store import load_state
 
 
+# Human-readable labels for the two credential types, keyed by the
+# state.json field that stores their schema_id. Falls back to "Unknown"
+# for anything not in state.json (e.g. a leftover credential from an
+# older schema version).
+CREDENTIAL_LABELS = {
+    "government_schema_id": ("Government ID", "Government"),
+    "employment_schema_id": ("Employment", "Employer"),
+}
+
+# Friendly names for the raw attribute names as they come back from the
+# wallet, so the demo doesn't show snake_case field names.
+ATTRIBUTE_LABELS = {
+    "full_name": "Full Name",
+    "date_of_birth": "Date of Birth",
+    "residency_status": "Residency Status",
+    "employer_name": "Employer",
+    "employment_status": "Employment Status",
+    "monthly_net_income": "Monthly Net Income",
+}
+
+
 def get_value(response, name):
     if response.get(name):
         return response[name]
@@ -34,18 +55,47 @@ def issue_credential(issuer, tenant, connection_id, cred_def_id, attributes, des
     print(f"\nCredential issued: {description}")
 
 
+def credential_label(state, schema_id):
+    """Return a (title, issuer) pair for a credential's schema_id.
+
+    Falls back to a generic label if the schema isn't one we recognize
+    from state.json (e.g. state.json is missing or the credential is from
+    an older schema version).
+    """
+    for state_key, label in CREDENTIAL_LABELS.items():
+        if schema_id and schema_id == state.get(state_key):
+            return label
+
+    return "Unknown credential", "Unknown issuer"
+
+
 def check_wallet():
+    """Show the credentials currently stored in the tenant's wallet."""
+    state = load_state()
     tenant = ACAClient("Tenant", TENANT_URL)
     credentials = tenant.wallet_credentials()
-    print("\nTENANT WALLET")
+
+    print("\n" + "=" * 57)
+    print("                     TENANT WALLET")
+    print("=" * 57)
+
     if not credentials:
-        print("No credentials have been received yet.")
+        print("\nWallet is currently empty.")
+        print("No credentials have been issued to the Tenant yet.")
         return
+
+    print("\nCredentials:")
+
     for number, credential in enumerate(credentials, start=1):
         info = credential.get("cred_info", credential)
-        print(f"\n[{number}] Schema: {info.get('schema_id', 'unknown')}")
+        title, issuer = credential_label(state, info.get("schema_id"))
+
+        print(f"\n[{number}] {title}")
+        print(f"    Issuer: {issuer}")
+
         for name, value in info.get("attrs", {}).items():
-            print(f"    {name}: {value}")
+            label = ATTRIBUTE_LABELS.get(name, name)
+            print(f"    {label}: {value}")
 
 
 def issue_employment_credential():

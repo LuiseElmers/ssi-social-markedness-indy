@@ -11,6 +11,14 @@ def run_action(action):
         print(f"\nError: {error}")
 
 
+def wait_for_return():
+    """Wait until the user confirms they're done and want to go back."""
+    while True:
+        choice = input("\nPress X to return to the main menu: ").strip().upper()
+        if choice == "X":
+            return
+
+
 def submenu_generate_proof():
     while True:
         print("\n" + "-" * 57)
@@ -69,6 +77,7 @@ def run_main_menu():
         choice = input("Select an option: ").strip().upper()
         if choice == "1":
             run_action(check_wallet)
+            wait_for_return()
         elif choice == "2":
             submenu_rental_application_process()
         elif choice == "X":

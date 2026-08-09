@@ -4,11 +4,15 @@ import time
 
 import requests
 
-from config import CHECK_INTERVAL, REQUEST_TIMEOUT, WAIT_SECONDS
+from config import CHECK_INTERVAL, LEDGER_WRITE_TIMEOUT, REQUEST_TIMEOUT, WAIT_SECONDS
 
 
 class ACAClientError(Exception):
     """Raised when ACA-Py cannot complete a request."""
+
+
+class ACATimeoutError(ACAClientError):
+    """Raised when a request runs past its read timeout."""
 
 
 class ACAClient:
@@ -21,15 +25,16 @@ class ACAClient:
     def get(self, path, params=None):
         return self._request("GET", path, params=params)
 
-    def post(self, path, body=None, params=None):
+    def post(self, path, body=None, params=None, timeout=None):
         return self._request(
             "POST",
             path,
             params=params,
             body=body,
+            timeout=timeout,
         )
 
-    def _request(self, method, path, params=None, body=None):
+    def _request(self, method, path, params=None, body=None, timeout=None):
         url = f"{self.url}/{path.lstrip('/')}"
 
         try:
@@ -38,8 +43,12 @@ class ACAClient:
                 url,
                 params=params,
                 json=body,
-                timeout=REQUEST_TIMEOUT,
+                timeout=timeout or REQUEST_TIMEOUT,
             )
+        except requests.Timeout as error:
+            raise ACATimeoutError(
+                f"{self.name}: {method} {path} timed out."
+            ) from error
         except requests.RequestException as error:
             raise ACAClientError(
                 f"{self.name} is not reachable: {error}"
@@ -60,46 +69,51 @@ class ACAClient:
             raise ACAClientError(
                 f"{self.name}: ACA-Py returned invalid JSON."
             ) from error
-            
+
     # Agent status
 
     def status(self):
         return self.get("/status")
-    
-    
+
     def is_ready(self):
         try:
-            response = self.status()
-            print(f"{self.name} status: {response}")
-            return bool(response.get("version"))
-        except ACAClientError as error:
-            print(f"{self.name} error: {error}")
+            self.status()
+            return True
+        except ACAClientError:
             return False
-    
-    
 
     def wait_until_ready(self):
-        """Wait until the ACA-Py agent is ready."""
+        """Wait until this agent answers on its Admin API."""
         start = time.time()
+        announced = False
 
         while time.time() - start < WAIT_SECONDS:
             if self.is_ready():
                 return
 
-            print(f"Waiting for {self.name} ...")
+            if not announced:
+                print(f"Waiting for {self.name} ...")
+                announced = True
+
             time.sleep(CHECK_INTERVAL)
 
         raise ACAClientError(
             f"{self.name} did not become ready within "
             f"{WAIT_SECONDS} seconds."
         )
-        
+
     # OOB/DID exchange
 
-
     def create_invitation(self, alias):
+        # auto_accept and multi_use are query parameters here, not body
+        # fields. Without auto_accept the issuer never answers the DID
+        # Exchange request and the connection never completes.
         return self.post(
             "/out-of-band/create-invitation",
+            params={
+                "auto_accept": "true",
+                "multi_use": "false",
+            },
             body={
                 "alias": alias,
                 "handshake_protocols": [
@@ -108,11 +122,9 @@ class ACAClient:
                 "accept": [
                     "didcomm/aip2;env=rfc19"
                 ],
-                "multi_use": False,
                 "use_public_did": False,
             },
         )
-
 
     def receive_invitation(self, invitation, alias):
         return self.post(
@@ -121,9 +133,9 @@ class ACAClient:
             params={
                 "alias": alias,
                 "use_existing_connection": "false",
+                "auto_accept": "true",
             },
         )
-
 
     def connections(self):
         """Return all connections known to the agent."""
@@ -132,6 +144,54 @@ class ACAClient:
     def connection(self, connection_id):
         """Return one connection."""
         return self.get(f"/connections/{connection_id}")
+
+    def find_connection_by_invitation(self, invi_msg_id):
+        """Return the connection created from an invitation, or None.
+
+        The inviting agent only gets a connection once the other side
+        answers the invitation, so we look it up by the invitation id.
+        """
+        results = self.get(
+            "/connections",
+            params={"invitation_msg_id": invi_msg_id},
+        ).get("results", [])
+
+        if results:
+            return results[0]["connection_id"]
+
+        return None
+
+    def find_usable_connection_by_alias(self, alias):
+        """Return a working connection_id for this alias, or None.
+
+        Used to recover a connection that state.json lost track of, or
+        that state.json points to but no longer exists in this wallet
+        (e.g. after a wallet reset). Old attempts under the same alias
+        (abandoned, stuck in request) are skipped -- only a connection
+        that actually reached "completed" or "active" counts as usable.
+        """
+        results = self.get(
+            "/connections",
+            params={"alias": alias},
+        ).get("results", [])
+
+        for connection in results:
+            if connection.get("state") in ("completed", "active"):
+                return connection["connection_id"]
+
+        return None
+
+    def connection_is_usable(self, connection_id):
+        """Return True if connection_id exists here and is usable."""
+        if not connection_id:
+            return False
+
+        try:
+            connection = self.connection(connection_id)
+        except ACAClientError:
+            return False
+
+        return connection.get("state") in ("completed", "active")
 
     def wait_for_connection(self, connection_id):
         """Wait until a DID Exchange connection becomes active."""
@@ -154,8 +214,55 @@ class ACAClient:
             f"{self.name}: connection {connection_id} "
             f"did not become active."
         )
-        
+
+    # Public DID
+
+    def get_public_did(self):
+        """Return this agent's public DID.
+
+        Schema and credential definition IDs are built from this DID.
+        """
+        response = self.get("/wallet/did/public")
+        result = response.get("result") or {}
+        did = result.get("did")
+
+        if not did:
+            raise ACAClientError(
+                f"{self.name}: no public DID is configured for this agent."
+            )
+
+        return did
+
     # Schemas
+
+    def created_schemas(self):
+        """Return schema IDs this agent's own wallet created.
+
+        This is not the same as what's on the ledger; use fetch_schema()
+        to check the ledger directly.
+        """
+        response = self.get("/schemas/created")
+        return response.get("schema_ids", [])
+
+    def fetch_schema(self, schema_id):
+        """Return the schema from the ledger, or None if it isn't there."""
+        try:
+            response = self.get(f"/schemas/{schema_id}")
+        except ACAClientError:
+            return None
+
+        schema = response.get("schema") or {}
+
+        if not schema:
+            return None
+
+        return {
+            "schema_id": schema_id,
+            "seq_no": response.get("seqNo", schema.get("seqNo")),
+            "attr_names": schema.get("attrNames", []),
+            "name": schema.get("name"),
+            "version": schema.get("version"),
+        }
 
     def create_schema(self, schema):
         """Create an Indy schema on the ledger."""
@@ -166,9 +273,34 @@ class ACAClient:
                 "schema_version": schema["version"],
                 "attributes": schema["attributes"],
             },
+            timeout=LEDGER_WRITE_TIMEOUT,
         )
-        
+
     # Credential definitions
+
+    def created_credential_definitions(self):
+        """Return credential definition IDs this agent's wallet created.
+
+        Like created_schemas(), this is the wallet's own list, not the
+        ledger's. Use fetch_credential_definition() for the ledger.
+        """
+        response = self.get("/credential-definitions/created")
+        return response.get("credential_definition_ids", [])
+
+    def fetch_credential_definition(self, cred_def_id):
+        """Return the credential definition from the ledger, or None.
+
+        Finding it here doesn't mean this wallet can still use it: the
+        private signing key lives only in the wallet, so after a wallet
+        reset the ledger may still list a definition this agent can no
+        longer sign with.
+        """
+        try:
+            response = self.get(f"/credential-definitions/{cred_def_id}")
+        except ACAClientError:
+            return None
+
+        return response.get("credential_definition") or None
 
     def create_credential_definition(self, schema_id, tag="default"):
         """Create an Indy credential definition."""
@@ -179,6 +311,7 @@ class ACAClient:
                 "tag": tag,
                 "support_revocation": False,
             },
+            timeout=LEDGER_WRITE_TIMEOUT,
         )
 
     # Issue credential 
