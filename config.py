@@ -24,25 +24,31 @@ def get_env(name, default):
     return value
 
 # ACA-Py Admin APIs
+#
+# The *_ADMIN_PORT values are normally written by start.py: it checks
+# whether the default port is free and, if not, picks the next free one
+# so a busy port doesn't stop the whole prototype from starting. The
+# *_URL variables below still take priority if set by hand (e.g. for an
+# agent running on a different host).
 
 GOVERNMENT_URL = get_env(
     "GOVERNMENT_URL",
-    "http://localhost:8032",
+    f"http://localhost:{get_env('GOVERNMENT_ADMIN_PORT', '8032')}",
 )
 
 EMPLOYER_URL = get_env(
     "EMPLOYER_URL",
-    "http://localhost:8022",
+    f"http://localhost:{get_env('EMPLOYER_ADMIN_PORT', '8022')}",
 )
 
 TENANT_URL = get_env(
     "TENANT_URL",
-    "http://localhost:8042",
+    f"http://localhost:{get_env('TENANT_ADMIN_PORT', '8042')}",
 )
 
 LANDLORD_URL = get_env(
     "LANDLORD_URL",
-    "http://localhost:8052",
+    f"http://localhost:{get_env('LANDLORD_ADMIN_PORT', '8052')}",
 )
 
 AGENT_URLS = {
@@ -53,10 +59,15 @@ AGENT_URLS = {
 }
 
 # VON-network
+#
+# VON_NETWORK_NAME is normally set automatically by start.sh (it
+# discovers whatever Docker network von-network actually created). The
+# default here matches von-network's own default project name ("von"),
+# which produces a Docker network called "von_von".
 
 VON_NETWORK_NAME = os.getenv(
     "VON_NETWORK_NAME",
-    "von-network",
+    "von_von",
 )
 
 LEDGER_REGISTER_URL = os.getenv(

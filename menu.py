@@ -55,8 +55,10 @@ def submenu_rental_application_process():
             run_action(show_landlord_proof_request)
         elif choice == "2":
             run_action(issue_employment_credential)
+            wait_for_return()
         elif choice == "3":
             run_action(issue_government_id)
+            wait_for_return()
         elif choice == "4":
             submenu_generate_proof()
         elif choice == "X":

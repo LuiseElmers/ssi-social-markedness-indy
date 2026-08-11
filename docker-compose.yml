@@ -5,12 +5,18 @@ networks:
     external: true
     name: ${VON_NETWORK_NAME}
 
+# Note: --wallet-local-did (below, for tenant/landlord) only takes effect
+# when a wallet is provisioned fresh. Changing it on an agent that already
+# has a wallet volume from an earlier run has no effect on the DID that's
+# already in that wallet -- a `python3 reset.py` (wipes wallets + ledger)
+# is needed for a flag change like this to actually apply.
+
 services:
   issuer_government:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     user: "0:0"
     environment: ["RUST_LOG=warning"]
-    ports: ["8031:8031", "8032:8032"]
+    ports: ["${GOVERNMENT_HTTP_PORT:-8031}:8031", "${GOVERNMENT_ADMIN_PORT:-8032}:8032"]
     volumes:
       - gov_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro
@@ -21,7 +27,7 @@ services:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     user: "0:0"
     environment: ["RUST_LOG=warning"]
-    ports: ["8021:8021", "8022:8022"]
+    ports: ["${EMPLOYER_HTTP_PORT:-8021}:8021", "${EMPLOYER_ADMIN_PORT:-8022}:8022"]
     volumes:
       - emp_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro
@@ -32,7 +38,7 @@ services:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     user: "0:0"
     environment: ["RUST_LOG=warning"]
-    ports: ["8041:8041", "8042:8042"]
+    ports: ["${TENANT_HTTP_PORT:-8041}:8041", "${TENANT_ADMIN_PORT:-8042}:8042"]
     volumes:
       - tenant_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro
@@ -43,7 +49,7 @@ services:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
     user: "0:0"
     environment: ["RUST_LOG=warning"]
-    ports: ["8051:8051", "8052:8052"]
+    ports: ["${LANDLORD_HTTP_PORT:-8051}:8051", "${LANDLORD_ADMIN_PORT:-8052}:8052"]
     volumes:
       - landlord_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro

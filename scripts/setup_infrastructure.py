@@ -51,6 +51,8 @@ def start_containers():
             ["docker", "compose", "up", "-d", *SERVICES],
             check=True,
             timeout=COMPOSE_UP_TIMEOUT,
+            capture_output=True,
+            text=True,
         )
     except subprocess.TimeoutExpired:
         raise ACAClientError(
@@ -58,8 +60,11 @@ def start_containers():
             f"{COMPOSE_UP_TIMEOUT} seconds. The Docker daemon may be busy "
             "or stuck; check 'docker compose ps' and try again."
         )
-    except subprocess.CalledProcessError:
-        raise ACAClientError("Docker Compose could not start the ACA-Py containers.")
+    except subprocess.CalledProcessError as error:
+        detail = error.stderr.strip() if error.stderr else "(no error output)"
+        raise ACAClientError(
+            f"Docker Compose could not start the ACA-Py containers:\n{detail}"
+        )
 
 
 def check_one_agent(agent, name, ready):

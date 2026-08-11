@@ -41,6 +41,39 @@ def get_state():
     return state
 
 
+def require_connection(state, key, party):
+    """Return the connection for `party`, or a specific error if it's missing."""
+    connection = state.get(key)
+    if not connection or not connection.get("issuer"):
+        raise ACAClientError(
+            f"No connection to the {party} exists yet. Restart the "
+            "application (python3 start.py) so setup can create it, "
+            "then try again."
+        )
+    return connection
+
+
+def require_cred_def(state, key, party):
+    """Return the credential definition ID for `party`, or a specific error."""
+    cred_def_id = state.get(key)
+    if not cred_def_id:
+        raise ACAClientError(
+            f"The {party} credential definition is missing. Restart the "
+            "application (python3 start.py) so setup can create it, "
+            "then try again."
+        )
+    return cred_def_id
+
+
+def has_credential(tenant, cred_def_id):
+    """Return True if the tenant wallet already holds this credential."""
+    for credential in tenant.wallet_credentials():
+        info = credential.get("cred_info", credential)
+        if info.get("cred_def_id") == cred_def_id:
+            return True
+    return False
+
+
 def issue_credential(issuer, tenant, connection_id, cred_def_id, attributes, description):
     """Run offer, request, issue and store as separate ACA-Py steps."""
     offer = issuer.send_credential_offer(connection_id, cred_def_id, attributes, description)
@@ -99,20 +132,36 @@ def check_wallet():
 
 
 def issue_employment_credential():
-    state = get_state()
+    state = load_state()
+    connection = require_connection(state, "employer_tenant", "Employer")
+    cred_def_id = require_cred_def(state, "employment_cred_def_id", "Employer")
+    tenant = ACAClient("Tenant", TENANT_URL)
+
+    if has_credential(tenant, cred_def_id):
+        print("\nAn Employment credential has already been issued to the Tenant.")
+        return
+
     issue_credential(
-        ACAClient("Employer", EMPLOYER_URL), ACAClient("Tenant", TENANT_URL),
-        state["employer_tenant"]["issuer"], state["employment_cred_def_id"],
+        ACAClient("Employer", EMPLOYER_URL), tenant,
+        connection["issuer"], cred_def_id,
         {"employer_name": "Example GmbH", "employment_status": "permanent", "monthly_net_income": "3200"},
         "Employment credential",
     )
 
 
 def issue_government_id():
-    state = get_state()
+    state = load_state()
+    connection = require_connection(state, "government_tenant", "Government")
+    cred_def_id = require_cred_def(state, "government_cred_def_id", "Government")
+    tenant = ACAClient("Tenant", TENANT_URL)
+
+    if has_credential(tenant, cred_def_id):
+        print("\nA Government ID credential has already been issued to the Tenant.")
+        return
+
     issue_credential(
-        ACAClient("Government", GOVERNMENT_URL), ACAClient("Tenant", TENANT_URL),
-        state["government_tenant"]["issuer"], state["government_cred_def_id"],
+        ACAClient("Government", GOVERNMENT_URL), tenant,
+        connection["issuer"], cred_def_id,
         {"full_name": "Alex Example", "date_of_birth": "1990-01-01", "residency_status": "valid"},
         "Government ID credential",
     )

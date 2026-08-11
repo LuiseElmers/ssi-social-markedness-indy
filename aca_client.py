@@ -312,7 +312,14 @@ class ACAClient:
             timeout=LEDGER_WRITE_TIMEOUT,
         )
 
-    # Issue credential 
+    # Issue credential
+    #
+    # The agents run with --wallet-type askar-anoncreds, so Issue
+    # Credential 2.0 and Present Proof 2.0 both expect their filter/
+    # request/presentation payloads under an "anoncreds" key, not the
+    # older "indy" key -- ACA-Py rejects "indy" outright for an
+    # anoncreds-capable issuer (400: "This issuer is anoncreds capable.
+    # Please use the anoncreds format.").
 
     def send_credential_offer(
         self,
@@ -346,7 +353,7 @@ class ACAClient:
                     "attributes": preview,
                 },
                 "filter": {
-                    "indy": {
+                    "anoncreds": {
                         "cred_def_id": cred_def_id,
                     }
                 },
@@ -355,21 +362,30 @@ class ACAClient:
 
     def credential_exchange(self, exchange_id):
         """Return one Issue Credential 2.0 exchange."""
-        return self.get(
+        result = self.get(
             f"/issue-credential-2.0/records/{exchange_id}"
         )
+        return result.get("cred_ex_record", result)
 
     def credential_records(self, thread_id=None):
-        """Return Issue Credential 2.0 exchanges."""
+        """Return Issue Credential 2.0 exchanges.
+
+        This endpoint wraps the actual record fields (state, cred_ex_id,
+        ...) inside a "cred_ex_record" key alongside per-format details
+        (anoncreds/indy/ld_proof/vc_di) -- unlike send-offer's response,
+        which is flat. Unwrap it here so callers always see a flat record.
+        """
         params = {}
 
         if thread_id:
             params["thread_id"] = thread_id
 
-        return self.get(
+        results = self.get(
             "/issue-credential-2.0/records",
             params=params,
         ).get("results", [])
+
+        return [result.get("cred_ex_record", result) for result in results]
 
     def send_credential_request(self, exchange_id):
         """Send the holder's credential request."""
@@ -423,7 +439,7 @@ class ACAClient:
                 "comment": comment,
                 "auto_verify": False,
                 "presentation_request": {
-                    "indy": {
+                    "anoncreds": {
                         "name": "Rental eligibility proof",
                         "version": "1.0",
                         "requested_attributes": attributes,
@@ -435,21 +451,28 @@ class ACAClient:
 
     def proof_exchange(self, exchange_id):
         """Return one Present Proof 2.0 exchange."""
-        return self.get(
+        result = self.get(
             f"/present-proof-2.0/records/{exchange_id}"
         )
+        return result.get("pres_ex_record", result)
 
     def proof_records(self, thread_id=None):
-        """Return Present Proof 2.0 exchanges."""
+        """Return Present Proof 2.0 exchanges.
+
+        Same wrapping issue as credential_records() -- the actual record
+        fields live under a "pres_ex_record" key here, not at top level.
+        """
         params = {}
 
         if thread_id:
             params["thread_id"] = thread_id
 
-        return self.get(
+        results = self.get(
             "/present-proof-2.0/records",
             params=params,
         ).get("results", [])
+
+        return [result.get("pres_ex_record", result) for result in results]
 
     def proof_credentials(self, exchange_id, referent=None):
         """Return credentials that can satisfy a proof request."""
@@ -470,7 +493,7 @@ class ACAClient:
             f"/present-proof-2.0/records/"
             f"{exchange_id}/send-presentation",
             body={
-                "indy": presentation,
+                "anoncreds": presentation,
             },
         )
 
