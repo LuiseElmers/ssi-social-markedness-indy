@@ -1,11 +1,11 @@
 """Start (or resume) the von-network Indy ledger on its own.
 
-Run this once per work session (after a reboot, or the very first time).
-Leave the containers running afterwards -- do not run this again just to
+Run this once per work session, after a reboot or the very first time.
+Leave the containers running afterwards; don't run this again just to
 start the SSI prototype. start.py checks that von-network is already up
-instead of starting it itself, so repeated test/demo runs stay fast; the
-slow part (the four Indy nodes finding consensus, which the emulation on
-Apple Silicon makes take several minutes) only has to happen here, once.
+instead of starting it itself, so repeated test/demo runs stay fast. The
+slow part (the four Indy nodes finding consensus, which takes several
+minutes under emulation on Apple Silicon) only has to happen here, once.
 
 Use reset.py if you deliberately want to wipe the ledger and start over.
 """
@@ -36,12 +36,12 @@ if result.returncode != 0:
     sys.exit("Docker Compose v2 is required (the 'docker compose' command).")
 
 # .env only needs to exist here so VON_NETWORK_NAME can be written into
-# it below -- the agent wallet keys/seeds are start.py's job.
+# it below. The agent wallet keys and seeds are start.py's job.
 if not ENV_FILE.exists():
     if not ENV_EXAMPLE_FILE.exists():
         sys.exit(
             f"{ENV_EXAMPLE_FILE} is missing. It should be part of this "
-            "project's files -- please restore it before running this script."
+            "project's files; please restore it before running this script."
         )
     print("No .env found, creating one from .env.example ...")
     shutil.copy(ENV_EXAMPLE_FILE, ENV_FILE)
@@ -59,10 +59,10 @@ if not (VON_NETWORK_DIR / "manage").exists():
     except subprocess.CalledProcessError:
         sys.exit("Could not fetch von-network. Is git installed and working?")
 
-# von-network doesn't pull a pre-built image -- it builds its own local
-# image called "von-network-base" from its own Dockerfile. That build has
-# to happen once on every machine; without it, "docker compose up" tries
-# to pull "von-network-base" as if it were a registry image and fails.
+# von-network doesn't pull a pre-built image. It builds its own local
+# image called "von-network-base" from its own Dockerfile, and that
+# build has to happen once on every machine, otherwise "docker compose
+# up" tries to pull "von-network-base" like a registry image and fails.
 image_check = subprocess.run(
     ["docker", "images", "-q", "von-network-base"],
     capture_output=True,
@@ -77,15 +77,14 @@ if not image_check.stdout.strip():
         sys.exit("Could not build the von-network image. Check the output above for details.")
 
 # von-network auto-detects the address containers should use to reach
-# each other (DOCKERHOST), which on Docker Desktop for Mac is normally
-# the hostname "host.docker.internal". That hostname can resolve to both
-# an IPv6 and an IPv4 address; if the IPv6 route doesn't actually work
-# (common on a home/university network without IPv6), the Rust pool
-# library the nodes use for their real traffic doesn't fall back to IPv4
-# the way curl does -- it just fails the whole connection, forever, on
-# a 10s retry loop that never succeeds. Resolving the IPv4 address
-# ourselves (from inside a container, the same way the nodes see it) and
-# passing it explicitly avoids that ambiguity entirely.
+# each other (DOCKERHOST). On Docker Desktop for Mac that's normally
+# the hostname "host.docker.internal", which can resolve to both an
+# IPv6 and an IPv4 address. If the IPv6 route doesn't actually work
+# (common on a home or university network without IPv6), the Rust pool
+# library the nodes use doesn't fall back to IPv4 the way curl does. It
+# just fails the connection forever on a 10s retry loop. Resolving the
+# IPv4 address ourselves, from inside a container the same way the
+# nodes see it, and passing it explicitly avoids that problem entirely.
 def resolve_dockerhost_ipv4():
     """Return the IPv4 address host.docker.internal resolves to from
     inside a container, or None if it can't be determined."""
@@ -105,13 +104,13 @@ def resolve_dockerhost_ipv4():
 
 dockerhost_ip = resolve_dockerhost_ipv4()
 
-# Start von-network using its own start script. If it's already running
-# unchanged, this is an instant no-op -- it does not restart or recreate
-# anything on its own. Passing the resolved IPv4 address only actually
-# changes anything the first time a ledger volume is created -- if
-# von-network/tmp already has a genesis file from an earlier run (e.g.
-# one made with the plain hostname), this does not retroactively fix it.
-# Run reset.py (and choose to wipe the ledger) first if you need that.
+# Start von-network with its own start script. If it's already running
+# unchanged, this is an instant no-op; it won't restart or recreate
+# anything on its own. Passing the resolved IPv4 address only matters
+# the first time a ledger volume is created. If von-network/tmp already
+# has a genesis file from an earlier run (made with the plain hostname,
+# say), this won't retroactively fix it; run reset.py and wipe the
+# ledger first if that's needed.
 print("Starting von-network (the Indy ledger) ...")
 try:
     manage_command = ["./manage", "start"]
@@ -122,39 +121,16 @@ try:
 except subprocess.CalledProcessError:
     sys.exit("von-network could not be started. Check the output above for details.")
 
-# Wait until the ledger answers. A completely fresh ledger (right after
-# reset.py, or the very first start) has to open its pool connection and
-# check the transaction author agreement before it reports ready, which
-# can take several minutes on an emulated host -- so this gets a
-# generous budget. This is the one place in the project that's allowed
-# to be slow: it only has to happen once per session, not on every test
-# run (see start.py, which just checks readiness instead of waiting).
-#
-# On a slow host the webserver's very first connection attempt to the
-# four nodes can time out before they're actually ready (it only tries
-# once, right after startup, and gives up for good if that fails -- it
-# does not keep retrying on its own). That shows up as "init_error" in
-# /status and "ready" staying false forever, not as "still starting".
-# Waiting longer never fixes that on its own -- restarting the webserver
-# does, since the nodes have had more time to start by then.
-#
-# This restarts it (once) after a fixed grace period, then just keeps
-# waiting -- matching what a manual restart during testing has reliably
-# fixed. Restarting it repeatedly beyond that has not made a difference
-# in practice: if the nodes themselves are stuck (not just slow), no
-# number of webserver restarts fixes that, so this stays simple instead
-# of retrying indefinitely. If it never becomes ready, the error below
-# points at the nodes directly instead of guessing at more restarts.
+
 def get_own_ip():
     """Return this machine's own LAN-facing IP address, or None.
 
-    This is only needed for the final "reachable under ..." message. On
-    a plain host (no VM), this is normally the same machine the browser
-    runs on anyway, so localhost already works there too -- but if this
-    script runs inside a VM (e.g. UTM on Apple Silicon), localhost in a
-    browser on the host machine does NOT reach it, so printing this IP
-    as a fallback saves having to look it up by hand every time (this
-    is the same "hostname -I" check done manually during testing).
+    Only needed for the final "reachable under" message. On a plain
+    host with no VM this is usually the same machine the browser runs
+    on, so localhost already works there too. But if this script runs
+    inside a VM (e.g. UTM on Apple Silicon), localhost in a browser on
+    the host machine does not reach it, so printing this IP as a
+    fallback saves looking it up by hand every time.
     """
     try:
         result = subprocess.run(
@@ -169,9 +145,9 @@ def get_own_ip():
     if result.returncode != 0 or not result.stdout.strip():
         return None
 
-    # "hostname -I" can list several addresses (e.g. Docker bridge
-    # networks too) separated by spaces -- the first one is normally
-    # the machine's main LAN address, which is the one that matters here.
+    # "hostname -I" can list several addresses, Docker bridge networks
+    # included. The first one is normally the machine's main LAN
+    # address, which is the one that matters here.
     return result.stdout.split()[0]
 
 
@@ -186,42 +162,60 @@ def get_webserver_container_name():
     return next((n for n in names if "webserver" in n), None)
 
 
+def restart_webserver():
+    """Restart the von-network webserver container quietly.
+
+    Output is captured instead of printed; the caller decides what the
+    person actually needs to see, not "docker restart"'s own echo of
+    the container name.
+    """
+    webserver_name = get_webserver_container_name()
+    if webserver_name:
+        subprocess.run(["docker", "restart", webserver_name], check=True, capture_output=True)
+    return webserver_name is not None
+
+
+# A completely fresh ledger, right after reset.py or on the very first
+# start, has to open its pool connection and check the transaction
+# author agreement before it reports ready. On an emulated host that
+# can take several minutes, so this gets a generous budget. This is the
+# one place in the project allowed to be slow, since it only runs once
+# per session (start.py just checks readiness instead of waiting).
+#
+# On a slow host, the webserver's first connection attempt to the four
+# nodes can time out before they're actually ready. It only tries once
+# right after startup and gives up for good if that fails, so this
+# shows up as "init_error" in /status with "ready" staying false
+# forever rather than "still starting". Waiting longer doesn't help;
+# restarting the webserver does, since the nodes have had more time to
+# come up by then. This restarts it once after a fixed grace period,
+# then keeps waiting, matching what a manual restart during testing
+# reliably fixed. Restarting repeatedly beyond that hasn't made a
+# difference in practice, so this stays simple instead of retrying
+# forever.
 print("Waiting for the von-network ledger to answer (this can take several minutes on a fresh start) ...")
 ledger_ready = False
 attempts = 900  # 30 minutes at 2s per iteration
-RESTART_AFTER = 90  # iterations (180s) -- give the nodes a real head start first
+RESTART_AFTER = 90  # iterations (180s), give the nodes a real head start first
 webserver_restarted = False
-last_status = None
 
 for i in range(attempts):
     try:
         response = requests.get("http://localhost:9000/status", timeout=2)
 
-        if response.ok:
-            status = response.json()
-            last_status = status
-
-            if status.get("ready"):
-                ledger_ready = True
-                break
+        if response.ok and response.json().get("ready"):
+            ledger_ready = True
+            break
     except (requests.RequestException, ValueError):
         pass
 
     if i == RESTART_AFTER and not webserver_restarted:
-        print(
-            f"Ledger not ready yet after {RESTART_AFTER * 2}s; "
-            "restarting the webserver once ..."
-        )
-        webserver_name = get_webserver_container_name()
-
-        if webserver_name:
-            subprocess.run(["docker", "restart", webserver_name], check=True)
-
+        print(f"Still starting after {RESTART_AFTER * 2}s, restarting the ledger webserver once ...")
+        restart_webserver()
         webserver_restarted = True
 
     if i > 0 and i % 30 == 0:
-        detail = f" -- last status: {last_status}" if last_status is not None else " -- no response from /status yet"
-        print(f"Still waiting ({i * 2} seconds so far){detail} ...")
+        print(f"Still waiting ({i * 2} seconds so far) ...")
 
     time.sleep(2)
 
@@ -230,19 +224,18 @@ if not ledger_ready:
         "The von-network ledger did not answer in time, even after "
         "restarting the webserver once. If the webserver's own logs show "
         "repeated 'Pool timeout' errors and the node containers sit at "
-        "0% CPU the whole time, this is very likely the IPv6/IPv4 "
-        "mismatch this script now works around (see the comment above "
-        "where 'Using ... as the node address' is printed) -- but that "
-        "only takes effect on a genuinely fresh ledger volume. If this "
-        "failure is happening on an *existing* volume created before "
-        "that fix, wipe it once and retry:\n"
+        "0% CPU the whole time, this is likely the IPv6/IPv4 mismatch "
+        "this script works around (see the 'Using ... as the node "
+        "address' line above), but that only takes effect on a genuinely "
+        "fresh ledger volume. If this happens on an existing volume "
+        "created before that fix, wipe it once and retry:\n"
         "  python3 reset.py   (choose to also wipe the ledger)\n"
         "  python3 ledger_up.py\n"
         "To confirm the diagnosis directly:\n"
         "  docker logs von-webserver-1 --tail 30\n"
         "  docker stats --no-stream\n"
-        "If that's not it, other things worth checking: fully quitting "
-        "and reopening Docker Desktop (not just the containers), and any "
+        "If that's not it, also worth checking: fully quitting and "
+        "reopening Docker Desktop (not just the containers), and any "
         "active VPN. If containers are left in a broken state after "
         "this, clean up with:\n"
         "  docker compose down\n"
@@ -250,17 +243,16 @@ if not ledger_ready:
         "  python3 ledger_up.py"
     )
 
-# /status reporting "ready" only means the four nodes found consensus --
-# it does not mean the webserver's own connection to the pool, which it
-# uses to render the ledger browser page, is actually working. In
-# testing, that connection sometimes stays broken even after /status
-# turns ready if it was first opened too early (before the nodes were
-# up), and the browser page then keeps failing until the webserver
-# container is restarted once more. So check the actual page here too,
-# not just /status, and restart the webserver again if it's still
-# broken -- this is the same manual "docker restart" step that was
-# needed during testing, just done automatically now.
-print("Checking that the ledger browser page itself is reachable ...")
+# /status reporting "ready" only means the four nodes found consensus.
+# It doesn't mean the webserver's own pool connection, which it uses to
+# render the ledger browser page, is actually working. In testing that
+# connection sometimes stayed broken even after /status turned ready,
+# if it was first opened too early, and the browser page kept failing
+# until the webserver container was restarted once more. So this checks
+# the actual page too, not just /status, and restarts the webserver
+# again if it's still broken; the same manual step that was needed
+# during testing, just automatic now.
+print("Checking that the ledger browser page is reachable ...")
 browser_page_ok = False
 
 for attempt in range(5):
@@ -274,11 +266,8 @@ for attempt in range(5):
     time.sleep(3)
 
 if not browser_page_ok and not webserver_restarted:
-    print("Ledger browser page not responding yet; restarting the webserver ...")
-    webserver_name = get_webserver_container_name()
-
-    if webserver_name:
-        subprocess.run(["docker", "restart", webserver_name], check=True)
+    print("Browser page not responding yet, restarting the webserver ...")
+    if restart_webserver():
         webserver_restarted = True
         time.sleep(10)
 
@@ -296,7 +285,7 @@ if not browser_page_ok:
     print(
         "Warning: the ledger browser page at http://localhost:9000 is "
         "still not responding, even after a webserver restart. This "
-        "doesn't affect the prototype itself (start.py / main.py only "
+        "doesn't affect the prototype itself (start.py and main.py only "
         "need the ledger to be ready, not the browser page), but if you "
         "need the browser page, try restarting it by hand:\n"
         "  docker restart von-webserver-1"
@@ -330,18 +319,18 @@ if von_network_name is None:
 set_key(str(ENV_FILE), "VON_NETWORK_NAME", von_network_name)
 
 print(
-    "\nvon-network is up and ready. Leave it running -- start.py will find "
+    "\nvon-network is up and ready. Leave it running; start.py will find "
     "it automatically from now on. You only need to run this script again "
     "after a reboot, or after reset.py."
 )
 
-# Print where the ledger browser page can actually be opened from. On a
-# plain host (no VM involved) http://localhost:9000 just works, since
-# the browser and the containers are on the same machine. But if this
-# script is running inside a VM, "localhost" in a browser on the host
-# machine means the host itself, not the VM -- so that URL will not
-# work there, and the VM's own IP has to be used instead. Printing both
-# here saves having to figure that out by hand every time.
+# Print where the ledger browser page can actually be opened. On a
+# plain host with no VM involved, http://localhost:9000 just works,
+# since the browser and the containers are on the same machine. But if
+# this script runs inside a VM, "localhost" in a browser on the host
+# machine means the host itself, not the VM, so that URL won't work
+# there and the VM's own IP has to be used instead. Printing both here
+# saves figuring that out by hand every time.
 own_ip = get_own_ip()
 
 print("\nThe ledger browser page can be reached at:")
@@ -350,8 +339,7 @@ print("  http://localhost:9000")
 if own_ip and own_ip != "127.0.0.1":
     print(f"  http://{own_ip}:9000")
     print(
-        "If this script is running inside a VM, use the second URL from "
-        "the host machine's browser -- 'localhost' there points at the "
-        "host itself, not the VM."
+        "If this script runs inside a VM, use the second URL from the "
+        "host machine's browser. 'localhost' there points at the host "
+        "itself, not the VM."
     )
-

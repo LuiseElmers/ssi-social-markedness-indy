@@ -25,11 +25,12 @@ def get_env(name, default):
 
 # ACA-Py Admin APIs
 #
-# The *_ADMIN_PORT values are normally written by start.py: it checks
-# whether the default port is free and, if not, picks the next free one
-# so a busy port doesn't stop the whole prototype from starting. The
-# *_URL variables below still take priority if set by hand (e.g. for an
-# agent running on a different host).
+# start.py resolves a free host port per agent (falling back to the
+# next free one if the default is busy) and writes it into .env as
+# e.g. GOVERNMENT_ADMIN_PORT. The URL is built from that port here, so
+# a busy default port on the machine actually takes effect instead of
+# silently being ignored. An explicit GOVERNMENT_URL etc. in .env still
+# overrides this completely, for the manual/advanced setup path.
 
 GOVERNMENT_URL = get_env(
     "GOVERNMENT_URL",
@@ -59,15 +60,10 @@ AGENT_URLS = {
 }
 
 # VON-network
-#
-# VON_NETWORK_NAME is normally set automatically by start.sh (it
-# discovers whatever Docker network von-network actually created). The
-# default here matches von-network's own default project name ("von"),
-# which produces a Docker network called "von_von".
 
 VON_NETWORK_NAME = os.getenv(
     "VON_NETWORK_NAME",
-    "von_von",
+    "von-network",
 )
 
 LEDGER_REGISTER_URL = os.getenv(
@@ -107,8 +103,10 @@ LEDGER_WRITE_TIMEOUT = 120
 
 # On a cold start each agent provisions its wallet and may run an internal
 # upgrade before its Admin API answers. With four agents at once this can
-# take a few minutes.
-AGENT_READY_TIMEOUT = 300
+# take a few minutes, and longer still under emulation, where the Indy
+# pool's own constant CPU use competes with agent startup for the same
+# limited cores.
+AGENT_READY_TIMEOUT = 600
 
 # Upper bound for "docker compose up" so a stuck daemon can't hang forever.
 # On slower or emulated hosts, plain container startup (before any agent
@@ -123,23 +121,124 @@ PROJECT_DIR = Path(__file__).resolve().parent
 STATE_FILE = PROJECT_DIR / "runtime" / "state.json"
 
 # Schemas
+#
+# Governance layer: no issuer schema in this project may include a
+# "marked" attribute -- a category that anti-discrimination frameworks
+# treat as protected (e.g. Fair Housing Act: race, color, national
+# origin, religion, sex, familial status, disability), or a close proxy
+# for one (residency status -> national origin/immigration status,
+# current address -> neighborhood/redlining proxy). This is enforced
+# below, not just followed by convention: a schema containing a marked
+# attribute makes the program refuse to start.
+#
+# date_of_birth is a special case: it's a proxy for age (also a marked
+# category), but unlike gender/nationality/etc. it's numeric and
+# ordinal, so AnonCreds predicate proofs can use it for a threshold
+# check (e.g. "born on/before X" for a legal-age proof) without ever
+# revealing the actual date. It's therefore allowed in a schema, but a
+# separate rule below (assert_request_does_not_reveal_marked_attributes)
+# ensures no proof request may ever place it in requested_attributes
+# (a cleartext reveal) -- only in requested_predicates.
+
+MARKED_ATTRIBUTES = {
+    "race",
+    "ethnicity",
+    "nationality",
+    "national_origin",
+    "gender",
+    "sex",
+    "religion",
+    "disability",
+    "marital_status",
+    "familial_status",
+    "sexual_orientation",
+    "age",
+    "residency_status",
+    "current_address",
+}
+
+# Marked-adjacent attributes that may appear in a schema because they
+# have a legitimate predicate-only use (see comment above). Everything
+# in MARKED_ATTRIBUTES itself may never appear in any schema at all.
+PREDICATE_ONLY_ATTRIBUTES = {
+    "date_of_birth",
+}
+
+
+def assert_no_marked_attributes(schema):
+    """Refuse to start if a schema definition includes a marked attribute."""
+    marked = set(schema["attributes"]) & MARKED_ATTRIBUTES
+
+    if marked:
+        raise ValueError(
+            f"Schema '{schema['name']}' includes marked attributes "
+            f"{sorted(marked)}, which this project's governance rules "
+            "do not allow."
+        )
+
 
 GOVERNMENT_ID_SCHEMA = {
     "name": "GovernmentID",
-    "version": "1.0",
+    "version": "1.3",
     "attributes": [
         "full_name",
         "date_of_birth",
-        "residency_status",
+        "expiry_date",
     ],
 }
+assert_no_marked_attributes(GOVERNMENT_ID_SCHEMA)
 
 EMPLOYMENT_SCHEMA = {
     "name": "EmploymentCredential",
-    "version": "1.0",
+    "version": "1.3",
     "attributes": [
         "employer_name",
         "employment_status",
         "monthly_net_income",
+        "employed_since",
     ],
 }
+assert_no_marked_attributes(EMPLOYMENT_SCHEMA)
+
+# Governance layer, continued: which attributes/predicates a Verifier's
+# proof request is allowed to reference for the rental use case. This
+# mirrors MARKED_ATTRIBUTES above, but restricts the Verifier side
+# instead of the Issuer side -- even from the already-unmarked attribute
+# pool across both schemas, only what's actually needed for a rental
+# eligibility check is approved. full_name and employer_name, for
+# example, exist in issued credentials, but a proof request that tries
+# to reference them is rejected here before it's ever sent.
+RENTAL_PROOF_ALLOWED_ATTRIBUTES = {
+    "employment_status",
+    "monthly_net_income",
+    "date_of_birth",
+    "expiry_date",
+}
+
+
+def assert_request_is_use_case_appropriate(attributes, predicates):
+    """Refuse to build a proof request that exceeds the approved allowlist."""
+    requested = {attribute["name"] for attribute in attributes.values()}
+    requested |= {predicate["name"] for predicate in predicates.values()}
+    disallowed = requested - RENTAL_PROOF_ALLOWED_ATTRIBUTES
+
+    if disallowed:
+        raise ValueError(
+            f"Proof request asks for {sorted(disallowed)}, which are not "
+            "approved for the rental use case."
+        )
+
+
+def assert_request_does_not_reveal_marked_attributes(attributes):
+    """Refuse to build a proof request that reveals a marked attribute
+    in cleartext -- date_of_birth (and anything else marked) may only
+    ever be used inside requested_predicates, never requested_attributes.
+    """
+    revealed = {attribute["name"] for attribute in attributes.values()}
+    disallowed = revealed & (MARKED_ATTRIBUTES | PREDICATE_ONLY_ATTRIBUTES)
+
+    if disallowed:
+        raise ValueError(
+            f"Proof request would reveal {sorted(disallowed)} in "
+            "cleartext, which this project's governance rules do not allow."
+        )

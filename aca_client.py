@@ -299,7 +299,14 @@ class ACAClient:
         return response.get("credential_definition") or None
 
     def create_credential_definition(self, public_did, schema_id, tag="default"):
-        """Create an Indy credential definition."""
+        """Create an Indy credential definition.
+
+        No revocation registry is set up here (support_revocation isn't
+        passed). Trade-off: credentials can't be revoked, but a
+        revocation registry is itself a place where repeated checks by
+        the same verifier could become a correlation point over time --
+        a tension with DR3 this prototype resolves by leaving it out.
+        """
         return self.post(
             "/anoncreds/credential-definition",
             body={
@@ -385,7 +392,10 @@ class ACAClient:
             params=params,
         ).get("results", [])
 
-        return [result.get("cred_ex_record", result) for result in results]
+        records = []
+        for result in results:
+            records.append(result.get("cred_ex_record", result))
+        return records
 
     def send_credential_request(self, exchange_id):
         """Send the holder's credential request."""
@@ -472,10 +482,17 @@ class ACAClient:
             params=params,
         ).get("results", [])
 
-        return [result.get("pres_ex_record", result) for result in results]
+        records = []
+        for result in results:
+            records.append(result.get("pres_ex_record", result))
+        return records
 
     def proof_credentials(self, exchange_id, referent=None):
-        """Return credentials that can satisfy a proof request."""
+        """Return credentials that can satisfy a proof request.
+
+        Unlike most list endpoints here, this one returns a plain JSON
+        array directly, not wrapped in {"results": [...]}.
+        """
         params = {}
 
         if referent:
@@ -485,7 +502,7 @@ class ACAClient:
             f"/present-proof-2.0/records/"
             f"{exchange_id}/credentials",
             params=params,
-        ).get("results", [])
+        )
 
     def send_presentation(self, exchange_id, presentation):
         """Send a proof presentation."""

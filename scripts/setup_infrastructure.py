@@ -51,8 +51,6 @@ def start_containers():
             ["docker", "compose", "up", "-d", *SERVICES],
             check=True,
             timeout=COMPOSE_UP_TIMEOUT,
-            capture_output=True,
-            text=True,
         )
     except subprocess.TimeoutExpired:
         raise ACAClientError(
@@ -60,11 +58,8 @@ def start_containers():
             f"{COMPOSE_UP_TIMEOUT} seconds. The Docker daemon may be busy "
             "or stuck; check 'docker compose ps' and try again."
         )
-    except subprocess.CalledProcessError as error:
-        detail = error.stderr.strip() if error.stderr else "(no error output)"
-        raise ACAClientError(
-            f"Docker Compose could not start the ACA-Py containers:\n{detail}"
-        )
+    except subprocess.CalledProcessError:
+        raise ACAClientError("Docker Compose could not start the ACA-Py containers.")
 
 
 def check_one_agent(agent, name, ready):
@@ -79,7 +74,16 @@ def check_one_agent(agent, name, ready):
 
 
 def wait_for_all_agents():
-    """Wait until all four ACA-Py Admin APIs are reachable."""
+    """Wait until all four ACA-Py Admin APIs are reachable.
+
+    No restart-on-timeout here, unlike ledger_up.py's webserver handling.
+    A first-time agent start is often just slow (wallet provisioning
+    competing with the Indy pool's own constant CPU use under
+    emulation), not stuck the way the webserver's single failed
+    connection attempt is. Restarting a container mid-provisioning
+    throws away its progress and makes a slow start even slower, so
+    this just waits, with a generous budget for that reason.
+    """
     print("Waiting for ACA-Py agents (this can take a while on first start) ...")
 
     start = time.time()
@@ -117,7 +121,9 @@ def wait_for_all_agents():
         time.sleep(CHECK_INTERVAL)
 
     raise ACAClientError(
-        "Not all ACA-Py agents became ready within the timeout."
+        "Not all ACA-Py agents became ready within the timeout, even "
+        "after restarting them once. Check 'docker compose logs' for "
+        "the affected agent."
     )
 
 
