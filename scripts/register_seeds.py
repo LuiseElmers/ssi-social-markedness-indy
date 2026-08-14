@@ -1,4 +1,4 @@
-"""Register the two issuer seeds on the local von-network ledger."""
+"""Register the two issuer seeds on the ledger."""
 
 import time
 
@@ -16,7 +16,6 @@ from config import (
 
 
 def register_seed(name, seed):
-    """Register a seed or continue when it is already known by the ledger."""
     start = time.time()
     while time.time() - start < WAIT_SECONDS:
         try:
@@ -28,7 +27,9 @@ def register_seed(name, seed):
             if response.ok or "already" in response.text.lower():
                 print(f"Ledger DID ready: {name}")
                 return
-            print(f"Waiting for ledger registration of {name}: HTTP {response.status_code}")
+            print(
+                f"Waiting for ledger registration of {name}: HTTP {response.status_code}"
+            )
         except requests.RequestException:
             print(f"Waiting for ledger registration service: {name}")
         time.sleep(CHECK_INTERVAL)
@@ -36,7 +37,6 @@ def register_seed(name, seed):
 
 
 def register_issuer_seeds():
-    """Only issuers need a ledger write role in this demonstrator."""
     print("Registering issuer DIDs on von-network ...")
     register_seed("Government", GOVERNMENT_SEED)
     register_seed("Employer", EMPLOYER_SEED)

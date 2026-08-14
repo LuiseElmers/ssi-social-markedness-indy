@@ -3,11 +3,17 @@
 import time
 
 from aca_client import ACAClientError
-from scripts.workflows import check_wallet, generate_proof, issue_employment_credential, issue_government_id, show_landlord_proof_request
+from scripts.workflows import (
+    check_wallet,
+    generate_proof,
+    issue_employment_credential,
+    issue_government_id,
+    show_landlord_proof_request,
+)
 
 
 def run_action(action):
-    time.sleep(0.5)
+    time.sleep(0.3)
     try:
         action()
     except ACAClientError as error:
@@ -15,13 +21,12 @@ def run_action(action):
 
 
 def wait_for_return():
-    """Wait until the user confirms they're done and want to go back."""
     while True:
         choice = input("\nPress X to go back: ").strip().upper()
         if choice == "X":
-            time.sleep(0.5)
+            time.sleep(0.3)
             return
-        print("Please press X to go back.")
+        print("Press X to go back.")
 
 
 def submenu_rental_application_process():
@@ -49,10 +54,10 @@ def submenu_rental_application_process():
             run_action(generate_proof)
             wait_for_return()
         elif choice == "X":
-            time.sleep(0.5)
+            time.sleep(0.3)
             return
         else:
-            print("Invalid input. Choose 1, 2, 3, 4, or X.")
+            print("\nInvalid input. Choose one of the available options.")
 
 
 def run_main_menu():
@@ -69,11 +74,11 @@ def run_main_menu():
             run_action(check_wallet)
             wait_for_return()
         elif choice == "2":
-            time.sleep(0.5)
+            time.sleep(0.3)
             submenu_rental_application_process()
         elif choice == "X":
             print("\nExit")
-            time.sleep(0.5)
+            time.sleep(0.3)
             return
         else:
             print("\nInvalid input. Choose one of the available options.")

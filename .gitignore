@@ -1,5 +1,7 @@
 venv/
 logs/
 *.log
-_pycache_/
+__pycache__/
 .env
+*.pyc
+runtime/state.json

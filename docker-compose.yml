@@ -15,7 +15,7 @@ services:
       - gov_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro
     networks: [von_net]
-    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8031", "--outbound-transport", "http", "--admin", "0.0.0.0", "8032", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "government_wallet", "--wallet-key", "${GOVERNMENT_WALLET_KEY}", "--seed", "${GOVERNMENT_SEED}", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://issuer_government:8031", "--auto-provision"]
+    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8031", "--outbound-transport", "http", "--admin", "0.0.0.0", "8032", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "government_wallet", "--wallet-key", "${GOVERNMENT_WALLET_KEY}", "--seed", "${GOVERNMENT_SEED}", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://issuer_government:8031", "--auto-provision", "--preserve-exchange-records"]
 
   issuer_employer:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
@@ -26,7 +26,7 @@ services:
       - emp_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro
     networks: [von_net]
-    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8021", "--outbound-transport", "http", "--admin", "0.0.0.0", "8022", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "employer_wallet", "--wallet-key", "${EMPLOYER_WALLET_KEY}", "--seed", "${EMPLOYER_SEED}", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://issuer_employer:8021", "--auto-provision"]
+    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8021", "--outbound-transport", "http", "--admin", "0.0.0.0", "8022", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "employer_wallet", "--wallet-key", "${EMPLOYER_WALLET_KEY}", "--seed", "${EMPLOYER_SEED}", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://issuer_employer:8021", "--auto-provision", "--preserve-exchange-records"]
 
   holder_tenant:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
@@ -37,7 +37,7 @@ services:
       - tenant_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro
     networks: [von_net]
-    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8041", "--outbound-transport", "http", "--admin", "0.0.0.0", "8042", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "tenant_wallet", "--wallet-key", "${TENANT_WALLET_KEY}", "--seed", "${TENANT_SEED}", "--wallet-local-did", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://holder_tenant:8041", "--auto-provision"]
+    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8041", "--outbound-transport", "http", "--admin", "0.0.0.0", "8042", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "tenant_wallet", "--wallet-key", "${TENANT_WALLET_KEY}", "--seed", "${TENANT_SEED}", "--wallet-local-did", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://holder_tenant:8041", "--auto-provision", "--preserve-exchange-records"]
 
   verifier_landlord:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.13-1.6-lts
@@ -48,7 +48,7 @@ services:
       - landlord_wallet_data:/home/aries/.acapy_agent/wallet
       - ./genesis.txn:/home/aries/genesis.txn:ro
     networks: [von_net]
-    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8051", "--outbound-transport", "http", "--admin", "0.0.0.0", "8052", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "landlord_wallet", "--wallet-key", "${LANDLORD_WALLET_KEY}", "--seed", "${LANDLORD_SEED}", "--wallet-local-did", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://verifier_landlord:8051", "--auto-provision"]
+    entrypoint: ["aca-py", "start", "--inbound-transport", "http", "0.0.0.0", "8051", "--outbound-transport", "http", "--admin", "0.0.0.0", "8052", "--admin-insecure-mode", "--wallet-type", "askar-anoncreds", "--wallet-name", "landlord_wallet", "--wallet-key", "${LANDLORD_WALLET_KEY}", "--seed", "${LANDLORD_SEED}", "--wallet-local-did", "--genesis-file", "/home/aries/genesis.txn", "--endpoint", "http://verifier_landlord:8051", "--auto-provision", "--preserve-exchange-records"]
 
 volumes:
   gov_wallet_data:

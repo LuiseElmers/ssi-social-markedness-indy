@@ -13,19 +13,11 @@ from config import (
 )
 from scripts.state_store import load_state, save_state
 
-
-
-# Human-readable labels for the two credential types, keyed by the
-# state.json field that stores their schema_id. Falls back to "Unknown"
-# for anything not in state.json (e.g. a leftover credential from an
-# older schema version).
 CREDENTIAL_LABELS = {
     "government_schema_id": ("Digital ID", "Government Agency"),
     "employment_schema_id": ("Employment", "Employer"),
 }
 
-# Friendly names for the raw attribute names as they come back from the
-# wallet, so the demo doesn't show snake_case field names.
 ATTRIBUTE_LABELS = {
     "full_name": "Full Name",
     "date_of_birth": "Date of Birth",
@@ -36,9 +28,7 @@ ATTRIBUTE_LABELS = {
     "employed_since": "Employed Since",
 }
 
-# Human-readable descriptions for predicates, used in the disclosure
-# preview instead of showing raw threshold numbers (e.g. a YYYYMMDD
-# cutoff date reads poorly on its own).
+# Human-readable descriptions for predicates
 PREDICATE_DESCRIPTIONS = {
     "income_at_least_2500": "Monthly Net Income >= 2500",
     "of_legal_age": "Is of legal age (18+)",
@@ -53,52 +43,39 @@ def get_value(response, name):
 
 
 def require_connection(state, key, party):
-    """Return the connection for `party`, or a specific error if it's missing."""
     connection = state.get(key)
     if not connection or not connection.get("issuer"):
         raise ACAClientError(
-            f"No connection to the {party} exists yet. Restart the "
-            "application (python3 start.py) so setup can create it, "
-            "then try again."
+            f"No connection to the {party} exists yet. Restart the application."
         )
     return connection
 
 
 def require_cred_def(state, key, party):
-    """Return the credential definition ID for `party`, or a specific error."""
     cred_def_id = state.get(key)
     if not cred_def_id:
         raise ACAClientError(
-            f"The {party} credential definition is missing. Restart the "
-            "application (python3 start.py) so setup can create it, "
-            "then try again."
+            f"The {party} credential definition is missing. Restart the application."
         )
+
     return cred_def_id
 
 
 def today_as_int():
-    """Today's date as a YYYYMMDD integer, for predicate comparisons."""
     return int(date.today().strftime("%Y%m%d"))
 
 
 def legal_age_cutoff():
-    """The latest birth date that counts as 18 today, as a YYYYMMDD integer."""
     today = date.today()
     try:
         cutoff = today.replace(year=today.year - 18)
     except ValueError:
-        # today is Feb 29 in a leap year, and 18 years ago wasn't one
+        # For leap year
         cutoff = today.replace(year=today.year - 18, day=28)
     return int(cutoff.strftime("%Y%m%d"))
 
 
 def format_date_for_display(value):
-    """Format an 8-digit YYYYMMDD value back into a readable date.
-
-    Dates are stored as plain digits (needed for AnonCreds predicate
-    proofs), so this is only for showing them to the person -- it never
-    changes what's actually stored or sent.
-    """
     text = str(value)
     if len(text) == 8 and text.isdigit():
         return f"{text[0:4]}-{text[4:6]}-{text[6:8]}"
@@ -106,7 +83,6 @@ def format_date_for_display(value):
 
 
 def find_credential_by_cred_def(tenant, cred_def_id):
-    """Return the tenant's stored credential info for this cred_def_id, or None."""
     for credential in tenant.wallet_credentials():
         info = credential.get("cred_info", credential)
         if info.get("cred_def_id") == cred_def_id:
@@ -115,31 +91,31 @@ def find_credential_by_cred_def(tenant, cred_def_id):
 
 
 def has_credential(tenant, cred_def_id):
-    """Return True if the tenant wallet already holds this credential."""
     return find_credential_by_cred_def(tenant, cred_def_id) is not None
 
 
-def issue_credential(issuer, tenant, connection_id, cred_def_id, attributes, description):
-    """Run offer, request, issue and store as separate ACA-Py steps."""
-    offer = issuer.send_credential_offer(connection_id, cred_def_id, attributes, description)
+def issue_credential(
+    issuer, tenant, connection_id, cred_def_id, attributes, description
+):
+    offer = issuer.send_credential_offer(
+        connection_id, cred_def_id, attributes, description
+    )
     issuer_record_id = get_value(offer, "cred_ex_id")
     thread_id = get_value(offer, "thread_id")
-    tenant_offer = tenant.wait_for_record(tenant.credential_records, thread_id, "offer-received")
+    tenant_offer = tenant.wait_for_record(
+        tenant.credential_records, thread_id, "offer-received"
+    )
     tenant.send_credential_request(get_value(tenant_offer, "cred_ex_id"))
     issuer.wait_for_record(issuer.credential_records, thread_id, "request-received")
     issuer.issue_credential(issuer_record_id)
-    tenant_credential = tenant.wait_for_record(tenant.credential_records, thread_id, "credential-received")
+    tenant_credential = tenant.wait_for_record(
+        tenant.credential_records, thread_id, "credential-received"
+    )
     tenant.store_credential(get_value(tenant_credential, "cred_ex_id"))
     print(f"\nCredential issued: {description}")
 
 
 def credential_label(state, schema_id):
-    """Return a (title, issuer) pair for a credential's schema_id.
-
-    Falls back to a generic label if the schema isn't one we recognize
-    from state.json (e.g. state.json is missing or the credential is from
-    an older schema version).
-    """
     for state_key, label in CREDENTIAL_LABELS.items():
         if schema_id and schema_id == state.get(state_key):
             return label
@@ -148,7 +124,6 @@ def credential_label(state, schema_id):
 
 
 def check_wallet():
-    """Show the credentials currently stored in the tenant's wallet."""
     state = load_state()
     tenant = ACAClient("Tenant", TENANT_URL)
     credentials = tenant.wallet_credentials()
@@ -187,8 +162,10 @@ def issue_employment_credential():
         return
 
     issue_credential(
-        ACAClient("Employer", EMPLOYER_URL), tenant,
-        connection["issuer"], cred_def_id,
+        ACAClient("Employer", EMPLOYER_URL),
+        tenant,
+        connection["issuer"],
+        cred_def_id,
         {
             "employer_name": "Example GmbH",
             "employment_status": "permanent",
@@ -210,8 +187,10 @@ def issue_government_id():
         return
 
     issue_credential(
-        ACAClient("Government", GOVERNMENT_URL), tenant,
-        connection["issuer"], cred_def_id,
+        ACAClient("Government", GOVERNMENT_URL),
+        tenant,
+        connection["issuer"],
+        cred_def_id,
         {
             "full_name": "Jane Doe",
             "date_of_birth": "19950514",
@@ -222,36 +201,32 @@ def issue_government_id():
 
 
 def landlord_proof_criteria(employment_cred_def_id, government_cred_def_id):
-    """Attributes and predicates the Landlord's proof request asks for.
-
-    Defined once here so the preview (show_landlord_proof_request) and
-    the actual request (generate_proof) can never drift apart. Legal age
-    and ID validity are proven as zero-knowledge predicates against the
-    Digital ID credential -- date_of_birth and expiry_date are never
-    revealed in cleartext, only whether they cross a threshold.
-
-    Trade-off: this is the only proof-request type the prototype
-    supports, fixed in code rather than configurable per Landlord. Real
-    flexibility here would let Verifiers ask different applicants
-    different things -- exactly what DR7 rules out.
-    """
     employment_restriction = [{"cred_def_id": employment_cred_def_id}]
     government_restriction = [{"cred_def_id": government_cred_def_id}]
 
     attributes = {
-        "employment_status": {"name": "employment_status", "restrictions": employment_restriction},
+        "employment_status": {
+            "name": "employment_status",
+            "restrictions": employment_restriction,
+        },
     }
     predicates = {
         "income_at_least_2500": {
-            "name": "monthly_net_income", "p_type": ">=", "p_value": 2500,
+            "name": "monthly_net_income",
+            "p_type": ">=",
+            "p_value": 2500,
             "restrictions": employment_restriction,
         },
         "of_legal_age": {
-            "name": "date_of_birth", "p_type": "<=", "p_value": legal_age_cutoff(),
+            "name": "date_of_birth",
+            "p_type": "<=",
+            "p_value": legal_age_cutoff(),
             "restrictions": government_restriction,
         },
         "id_not_expired": {
-            "name": "expiry_date", "p_type": ">=", "p_value": today_as_int(),
+            "name": "expiry_date",
+            "p_type": ">=",
+            "p_value": today_as_int(),
             "restrictions": government_restriction,
         },
     }
@@ -262,7 +237,6 @@ def landlord_proof_criteria(employment_cred_def_id, government_cred_def_id):
 
 
 def print_request_labels(attributes, predicates):
-    """Print what a proof request asks for, without any values."""
     print("\nAttributes that will be revealed to the Landlord:")
     for attribute in attributes.values():
         label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
@@ -275,7 +249,6 @@ def print_request_labels(attributes, predicates):
 
 
 def print_disclosure_preview(attributes, predicates, attrs):
-    """Print exactly what will be disclosed, using the tenant's real values."""
     print("\nAttributes that will be revealed to the Landlord:")
     for attribute in attributes.values():
         label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
@@ -290,22 +263,23 @@ def print_disclosure_preview(attributes, predicates, attrs):
 
 
 def show_landlord_proof_request():
-    """Show what the Landlord's proof request asks for."""
     state = load_state()
-    employment_cred_def_id = require_cred_def(state, "employment_cred_def_id", "Employer")
-    government_cred_def_id = require_cred_def(state, "government_cred_def_id", "Government")
-    attributes, predicates = landlord_proof_criteria(employment_cred_def_id, government_cred_def_id)
+    employment_cred_def_id = require_cred_def(
+        state, "employment_cred_def_id", "Employer"
+    )
+    government_cred_def_id = require_cred_def(
+        state, "government_cred_def_id", "Government"
+    )
+    attributes, predicates = landlord_proof_criteria(
+        employment_cred_def_id, government_cred_def_id
+    )
 
     print("\nLANDLORD'S PROOF REQUEST")
     print_request_labels(attributes, predicates)
 
 
 def check_proof_eligibility(employment_info, government_info):
-    """Return a list of reasons the tenant can't send this proof yet.
 
-    Empty list means everything is in order. Checked locally against the
-    tenant's own stored values before anything is sent to the Landlord.
-    """
     problems = []
 
     if not employment_info:
@@ -322,7 +296,6 @@ def check_proof_eligibility(employment_info, government_info):
         birth_date = int(government_info["attrs"].get("date_of_birth", 0))
         if birth_date > legal_age_cutoff():
             problems.append("Not yet of legal age (18+).")
-
         expiry_date = int(government_info["attrs"].get("expiry_date", 0))
         if expiry_date < today_as_int():
             problems.append("Digital ID has expired.")
@@ -331,29 +304,31 @@ def check_proof_eligibility(employment_info, government_info):
 
 
 def landlord_decision(verified):
-    """The Landlord's rental decision, based only on the verified proof.
-
-    Deliberately generic wording, identical for every tenant: it never
-    echoes back which credential or value was involved, only whether
-    the cryptographically verified proof met the fixed criteria.
-    """
     if verified:
-        print("\nDecision: Application accepted.")
-        print("All required criteria were proven and verified.")
+        message = (
+            "Application accepted. All required criteria were proven and verified."
+        )
     else:
-        print("\nDecision: Application not accepted.")
-        print("The proof could not be verified against the required criteria.")
+        message = "Application not accepted. The proof could not be verified against the required criteria."
+
+    print(f"\nDecision: {message}")
+    return message
 
 
 def generate_proof():
-    """Check eligibility, ask for consent, then answer and verify the proof."""
     state = load_state()
     landlord = ACAClient("Landlord", LANDLORD_URL)
     tenant = ACAClient("Tenant", TENANT_URL)
     connection = require_connection(state, "landlord_tenant", "Landlord")
-    employment_cred_def_id = require_cred_def(state, "employment_cred_def_id", "Employer")
-    government_cred_def_id = require_cred_def(state, "government_cred_def_id", "Government")
-    attributes, predicates = landlord_proof_criteria(employment_cred_def_id, government_cred_def_id)
+    employment_cred_def_id = require_cred_def(
+        state, "employment_cred_def_id", "Employer"
+    )
+    government_cred_def_id = require_cred_def(
+        state, "government_cred_def_id", "Government"
+    )
+    attributes, predicates = landlord_proof_criteria(
+        employment_cred_def_id, government_cred_def_id
+    )
 
     employment_info = find_credential_by_cred_def(tenant, employment_cred_def_id)
     government_info = find_credential_by_cred_def(tenant, government_cred_def_id)
@@ -368,7 +343,9 @@ def generate_proof():
     submitted = state.get("rental_proof_submission")
     if submitted:
         print("\nA rental proof was already submitted to the Landlord:")
-        print_disclosure_preview(submitted["attributes"], submitted["predicates"], submitted["attrs"])
+        print_disclosure_preview(
+            submitted["attributes"], submitted["predicates"], submitted["attrs"]
+        )
         return
 
     attrs = {}
@@ -386,7 +363,9 @@ def generate_proof():
     request = landlord.send_proof_request(connection["issuer"], attributes, predicates)
     landlord_record_id = get_value(request, "pres_ex_id")
     thread_id = get_value(request, "thread_id")
-    tenant_request = tenant.wait_for_record(tenant.proof_records, thread_id, "request-received")
+    tenant_request = tenant.wait_for_record(
+        tenant.proof_records, thread_id, "request-received"
+    )
     tenant_record_id = tenant_request["pres_ex_id"]
 
     employment = tenant.proof_credentials(tenant_record_id, "employment_status")
@@ -395,14 +374,19 @@ def generate_proof():
     id_valid = tenant.proof_credentials(tenant_record_id, "id_not_expired")
 
     if not employment or not income or not legal_age or not id_valid:
-        raise ACAClientError("The tenant does not have all the credentials needed for this proof.")
+        raise ACAClientError(
+            "The tenant does not have all the credentials needed for this proof."
+        )
 
     tenant.send_presentation(
         tenant_record_id,
         {
             "self_attested_attributes": {},
             "requested_attributes": {
-                "employment_status": {"cred_id": employment[0]["cred_info"]["referent"], "revealed": True},
+                "employment_status": {
+                    "cred_id": employment[0]["cred_info"]["referent"],
+                    "revealed": True,
+                },
             },
             "requested_predicates": {
                 "income_at_least_2500": {"cred_id": income[0]["cred_info"]["referent"]},
@@ -413,7 +397,8 @@ def generate_proof():
     )
     landlord.wait_for_record(landlord.proof_records, thread_id, "presentation-received")
     result = landlord.verify_presentation(landlord_record_id)
-    landlord_decision(result.get("verified") in (True, "true"))
+    decision_message = landlord_decision(result.get("verified") in (True, "true"))
+    landlord.send_basic_message(connection["issuer"], decision_message)
 
     state["rental_proof_submission"] = {
         "attributes": attributes,
@@ -421,5 +406,3 @@ def generate_proof():
         "attrs": attrs,
     }
     save_state(state)
-    print("\nSubmitted to the Landlord:")
-    print_disclosure_preview(attributes, predicates, attrs)

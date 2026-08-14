@@ -15,7 +15,6 @@ from config import (
 from scripts.register_seeds import register_issuer_seeds
 from scripts.bootstrap import bootstrap
 
-
 SERVICES = [
     "issuer_government",
     "issuer_employer",
@@ -25,7 +24,6 @@ SERVICES = [
 
 
 def check_von_network():
-    """Check that the external von-network already exists."""
     try:
         subprocess.run(
             ["docker", "network", "inspect", VON_NETWORK_NAME],
@@ -33,17 +31,12 @@ def check_von_network():
             capture_output=True,
         )
     except subprocess.CalledProcessError:
-        raise ACAClientError(
-            f"Docker network '{VON_NETWORK_NAME}' was not found."
-        )
+        raise ACAClientError(f"Docker network '{VON_NETWORK_NAME}' was not found.")
     except FileNotFoundError:
-        raise ACAClientError(
-            "Docker is not installed or not available in PATH."
-        )
+        raise ACAClientError("Docker is not installed or not available in PATH.")
 
 
 def start_containers():
-    """Start all ACA-Py containers."""
     print("Starting ACA-Py containers ...")
 
     try:
@@ -54,36 +47,19 @@ def start_containers():
         )
     except subprocess.TimeoutExpired:
         raise ACAClientError(
-            "'docker compose up' did not finish within "
-            f"{COMPOSE_UP_TIMEOUT} seconds. The Docker daemon may be busy "
-            "or stuck; check 'docker compose ps' and try again."
+            f"'docker compose up' did not finish within {COMPOSE_UP_TIMEOUT} seconds."
         )
     except subprocess.CalledProcessError:
         raise ACAClientError("Docker Compose could not start the ACA-Py containers.")
 
 
 def check_one_agent(agent, name, ready):
-    """Check one agent's /status and record the result under its name.
-
-    Runs in its own thread so the four agents can be checked at the same
-    time instead of one after another. This is a cheap, read-only call
-    (not the CPU-heavy credential definition work), so checking all four
-    at once doesn't compete for resources the way that did.
-    """
+    """Check one agent's /status and record the result."""
     ready[name] = agent.is_ready()
 
 
 def wait_for_all_agents():
-    """Wait until all four ACA-Py Admin APIs are reachable.
-
-    No restart-on-timeout here, unlike ledger_up.py's webserver handling.
-    A first-time agent start is often just slow (wallet provisioning
-    competing with the Indy pool's own constant CPU use under
-    emulation), not stuck the way the webserver's single failed
-    connection attempt is. Restarting a container mid-provisioning
-    throws away its progress and makes a slow start even slower, so
-    this just waits, with a generous budget for that reason.
-    """
+    """Wait until all four ACA-Py Admin APIs are reachable."""
     print("Waiting for ACA-Py agents (this can take a while on first start) ...")
 
     start = time.time()
@@ -92,13 +68,11 @@ def wait_for_all_agents():
     while time.time() - start < AGENT_READY_TIMEOUT:
         ready = {}
         threads = []
-
         for name, url in AGENT_URLS.items():
             agent = ACAClient(name, url)
             thread = threading.Thread(target=check_one_agent, args=(agent, name, ready))
             threads.append(thread)
             thread.start()
-
         for thread in threads:
             thread.join()
 
@@ -107,40 +81,21 @@ def wait_for_all_agents():
         for name in AGENT_URLS:
             if ready.get(name):
                 continue
-
             all_ready = False
-
             if name not in announced:
                 print(f"Waiting for {name} ...")
                 announced.add(name)
-
         if all_ready:
             print("All ACA-Py agents are ready.")
             return
 
         time.sleep(CHECK_INTERVAL)
 
-    raise ACAClientError(
-        "Not all ACA-Py agents became ready within the timeout, even "
-        "after restarting them once. Check 'docker compose logs' for "
-        "the affected agent."
-    )
+    raise ACAClientError("Not all ACA-Py agents became ready within the timeout.")
 
 
 def run_full_initialization():
-    """Run the startup steps in the correct order.
-
-    Registering the issuer DIDs has to happen before the containers even
-    start, not after: with a --seed (and no --wallet-local-did), ACA-Py
-    treats the DID as public and tries to publish its own endpoint to the
-    ledger right at startup, which fails if that DID isn't registered on
-    the ledger yet. This step only talks to von-network directly, not to
-    the agents, so it doesn't need them running anyway.
-
-    Each step is timed and the breakdown is printed at the end, so a slow
-    run shows exactly which step ate the time instead of leaving that to
-    guesswork from the docker logs.
-    """
+    """Run the startup steps in the correct order."""
     steps = [
         ("Checking von-network", check_von_network),
         ("Registering issuer DIDs", register_issuer_seeds),
