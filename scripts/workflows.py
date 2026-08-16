@@ -247,14 +247,20 @@ def print_request_labels(attributes, predicates):
         print(f"  - {description}")
 
 
-def print_disclosure_preview(attributes, predicates, attrs):
-    print("\nAttributes that will be revealed to the Landlord:")
+def print_disclosure_preview(attributes, predicates, attrs, already_sent=False):
+    if already_sent:
+        print("\nRevealed attributes:")
+    else:
+        print("\nAttributes that will be revealed to the Landlord:")
     for attribute in attributes.values():
         label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
         value = format_date(attrs.get(attribute["name"], "not available"))
         print(f"  - {label}: {value}")
 
-    print("\nPredicates that will be proven, but not revealed as an exact value:")
+    if already_sent:
+        print("\nProven predicates:")
+    else:
+        print("\nPredicates that will be proven, but not revealed as an exact value:")
     for key, predicate in predicates.items():
         description = PREDICATE_DESCRIPTIONS.get(key, predicate["name"])
         value = format_date(attrs.get(predicate["name"], "not available"))
@@ -303,7 +309,7 @@ def check_proof_eligibility(employment_info, government_info):
 
 def landlord_decision(verified):
     if verified:
-        message = ("Application accepted. All required criteria were proven and verified.")
+        message = "Application accepted. All required criteria were proven and verified."
     else:
         message = "Application not accepted. The proof could not be verified against the required criteria."
 
@@ -340,7 +346,10 @@ def generate_proof():
     if submitted:
         print("\nA rental proof was already submitted to the Landlord:")
         print_disclosure_preview(
-            submitted["attributes"], submitted["predicates"], submitted["attrs"]
+            submitted["attributes"],
+            submitted["predicates"],
+            submitted["attrs"],
+            already_sent=True,
         )
         return
 

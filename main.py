@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 """Single entry point for the SSI prototype."""
 
-from dotenv import load_dotenv
-
-from aca_client import ACAClientError
-from menu import run_main_menu
-from scripts.setup_infrastructure import run_initialization
-from scripts.ledger import ensure_ledger_up, ledger_is_ready
-from scripts.environment import prepare_environment
-
 
 def main():
+    from scripts.ledger import ensure_ledger_up, ledger_is_ready
+
     if ledger_is_ready():
         print("von-network is already up, skipping the ledger startup ...")
     else:
@@ -20,9 +14,17 @@ def main():
         )
         ensure_ledger_up()
 
+    from scripts.environment import prepare_environment
+
     prepare_environment()
 
+    from dotenv import load_dotenv
+
     load_dotenv(override=True)
+
+    from aca_client import ACAClientError
+    from menu import run_main_menu
+    from scripts.setup_infrastructure import run_initialization
 
     try:
         run_initialization()

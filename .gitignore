@@ -5,3 +5,4 @@ __pycache__/
 .env
 *.pyc
 runtime/state.json
+dev_reset.py
