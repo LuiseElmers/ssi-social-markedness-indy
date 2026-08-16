@@ -35,7 +35,8 @@ def register_seed(name, seed):
         time.sleep(CHECK_INTERVAL)
     raise ACAClientError(f"Could not register {name} at {LEDGER_REGISTER_URL}")
 
-
+# Only issuers need a ledger write role
+# Tenant and Landlord use DIDComm peer DIDs
 def register_issuer_seeds():
     print("Registering issuer DIDs on von-network ...")
     register_seed("Government", GOVERNMENT_SEED)

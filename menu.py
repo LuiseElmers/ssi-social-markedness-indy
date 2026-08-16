@@ -11,9 +11,12 @@ from scripts.workflows import (
     show_landlord_proof_request,
 )
 
+# Small pause after menu actions so output doesn't scroll by too fast
+MENU_PAUSE_SECONDS = 0.3
+
 
 def run_action(action):
-    time.sleep(0.3)
+    time.sleep(MENU_PAUSE_SECONDS)
     try:
         action()
     except ACAClientError as error:
@@ -24,7 +27,7 @@ def wait_for_return():
     while True:
         choice = input("\nPress X to go back: ").strip().upper()
         if choice == "X":
-            time.sleep(0.3)
+            time.sleep(MENU_PAUSE_SECONDS)
             return
         print("Press X to go back.")
 
@@ -54,7 +57,7 @@ def submenu_rental_application_process():
             run_action(generate_proof)
             wait_for_return()
         elif choice == "X":
-            time.sleep(0.3)
+            time.sleep(MENU_PAUSE_SECONDS)
             return
         else:
             print("\nInvalid input. Choose one of the available options.")
@@ -74,11 +77,11 @@ def run_main_menu():
             run_action(check_wallet)
             wait_for_return()
         elif choice == "2":
-            time.sleep(0.3)
+            time.sleep(MENU_PAUSE_SECONDS)
             submenu_rental_application_process()
         elif choice == "X":
             print("\nExit")
-            time.sleep(0.3)
+            time.sleep(MENU_PAUSE_SECONDS)
             return
         else:
             print("\nInvalid input. Choose one of the available options.")

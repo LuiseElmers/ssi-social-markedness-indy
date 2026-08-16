@@ -85,7 +85,6 @@ class ACAClient:
 
     # OOB/DID exchange
     def create_invitation(self, alias):
-        """Create an out-of-band invitation."""
         return self.post(
             "/out-of-band/create-invitation",
             params={
@@ -101,7 +100,6 @@ class ACAClient:
         )
 
     def receive_invitation(self, invitation, alias):
-        """Receive OOB invitation."""
         return self.post(
             "/out-of-band/receive-invitation",
             body=invitation,
@@ -139,7 +137,6 @@ class ACAClient:
         return None
 
     def connection_is_usable(self, connection_id):
-        """Check if connection_id exists."""
         if not connection_id:
             return False
         try:
@@ -163,7 +160,7 @@ class ACAClient:
             time.sleep(CHECK_INTERVAL)
 
         raise ACAClientError(
-            f"{self.name}: connection {connection_id} " f"did not become active."
+            f"{self.name}: connection {connection_id} did not become active."
         )
 
     # Public DID
@@ -180,10 +177,6 @@ class ACAClient:
         return did
 
     # Schemas
-    def created_schemas(self):
-        response = self.get("/anoncreds/schemas")
-        return response.get("schema_ids", [])
-
     def fetch_schema(self, schema_id):
         try:
             response = self.get(f"/anoncreds/schema/{schema_id}")
@@ -232,7 +225,6 @@ class ACAClient:
             timeout=LEDGER_WRITE_TIMEOUT,
         )
 
-    # Issue credential
     def send_credential_offer(
         self, connection_id, cred_def_id, attributes, comment="Credential offer"
     ):
@@ -264,7 +256,6 @@ class ACAClient:
         )
 
     def credential_exchange(self, exchange_id):
-        """Return an Issue Credential 2.0 exchange."""
         result = self.get(f"/issue-credential-2.0/records/{exchange_id}")
         return result.get("cred_ex_record", result)
 
@@ -273,7 +264,10 @@ class ACAClient:
         results = self.get("/issue-credential-2.0/records", params=params).get(
             "results", []
         )
-        return [res.get("cred_ex_record", res) for res in results]
+        records = []
+        for result in results:
+            records.append(result.get("cred_ex_record", result))
+        return records
 
     def send_credential_request(self, exchange_id):
         return self.post(f"/issue-credential-2.0/records/{exchange_id}/send-request")
@@ -323,9 +317,7 @@ class ACAClient:
         return result.get("pres_ex_record", result)
 
     def proof_records(self, thread_id=None):
-        params = {}
-        if thread_id:
-            params["thread_id"] = thread_id
+        params = {"thread_id": thread_id} if thread_id else {}
         results = self.get("/present-proof-2.0/records", params=params).get(
             "results", []
         )
@@ -352,7 +344,6 @@ class ACAClient:
         )
 
     def send_basic_message(self, connection_id, content):
-        """Send a DIDComm Basic Message (RFC 0095) over an existing connection."""
         return self.post(
             f"/connections/{connection_id}/send-message",
             body={"content": content},

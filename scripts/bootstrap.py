@@ -106,7 +106,7 @@ def wait_for_issuer_connection(issuer, invi_msg_id):
     raise ACAClientError("No connection was created from the invitation in time.")
 
 
-def wait_for_connection(client, connection_id):
+def block_until_connected(client, connection_id):
     start = time.time()
 
     while time.time() - start < WAIT_SECONDS:
@@ -138,8 +138,8 @@ def connect(issuer, tenant, name):
     tenant_connection_id = get_id(tenant_response, "connection_id")
     issuer_connection_id = wait_for_issuer_connection(issuer, invi_msg_id)
 
-    wait_for_connection(issuer, issuer_connection_id)
-    wait_for_connection(tenant, tenant_connection_id)
+    block_until_connected(issuer, issuer_connection_id)
+    block_until_connected(tenant, tenant_connection_id)
 
     return {
         "issuer": issuer_connection_id,
@@ -171,6 +171,8 @@ def bootstrap():
     """Create everything that is missing and save its IDs locally."""
     state = load_state()
 
+    # Cred def creation is CPU-heavy, so running Government and Employer
+    # stays sequential on purpose.
     government = ACAClient("Government", GOVERNMENT_URL)
     employer = ACAClient("Employer", EMPLOYER_URL)
     tenant = ACAClient("Tenant", TENANT_URL)

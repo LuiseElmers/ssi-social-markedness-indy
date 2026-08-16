@@ -8,8 +8,8 @@ from config import (
     GOVERNMENT_URL,
     LANDLORD_URL,
     TENANT_URL,
-    assert_request_does_not_reveal_marked_attributes,
-    assert_request_is_use_case_appropriate,
+    check_disclosure,
+    check_use_case_scope,
 )
 from scripts.state_store import load_state, save_state
 
@@ -28,7 +28,6 @@ ATTRIBUTE_LABELS = {
     "employed_since": "Employed Since",
 }
 
-# Human-readable descriptions for predicates
 PREDICATE_DESCRIPTIONS = {
     "income_at_least_2500": "Monthly Net Income >= 2500",
     "of_legal_age": "Is of legal age (18+)",
@@ -75,7 +74,7 @@ def legal_age_cutoff():
     return int(cutoff.strftime("%Y%m%d"))
 
 
-def format_date_for_display(value):
+def format_date(value):
     text = str(value)
     if len(text) == 8 and text.isdigit():
         return f"{text[0:4]}-{text[4:6]}-{text[6:8]}"
@@ -148,7 +147,7 @@ def check_wallet():
 
         for name, value in info.get("attrs", {}).items():
             label = ATTRIBUTE_LABELS.get(name, name)
-            print(f"    {label}: {format_date_for_display(value)}")
+            print(f"    {label}: {format_date(value)}")
 
 
 def issue_employment_credential():
@@ -231,8 +230,8 @@ def landlord_proof_criteria(employment_cred_def_id, government_cred_def_id):
         },
     }
 
-    assert_request_is_use_case_appropriate(attributes, predicates)
-    assert_request_does_not_reveal_marked_attributes(attributes)
+    check_use_case_scope(attributes, predicates)
+    check_disclosure(attributes)
     return attributes, predicates
 
 
@@ -252,13 +251,13 @@ def print_disclosure_preview(attributes, predicates, attrs):
     print("\nAttributes that will be revealed to the Landlord:")
     for attribute in attributes.values():
         label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
-        value = format_date_for_display(attrs.get(attribute["name"], "not available"))
+        value = format_date(attrs.get(attribute["name"], "not available"))
         print(f"  - {label}: {value}")
 
     print("\nPredicates that will be proven, but not revealed as an exact value:")
     for key, predicate in predicates.items():
         description = PREDICATE_DESCRIPTIONS.get(key, predicate["name"])
-        value = format_date_for_display(attrs.get(predicate["name"], "not available"))
+        value = format_date(attrs.get(predicate["name"], "not available"))
         print(f"  - {description} (your value: {value}, not disclosed)")
 
 

@@ -9,8 +9,6 @@ load_dotenv()
 
 
 def get_env(name, default):
-    """
-    Read environment variable. Use default when value is missing or empty."""
     value = os.getenv(name)
 
     if value is None or value.strip() == "":
@@ -98,7 +96,7 @@ PREDICATE_ONLY_ATTRIBUTES = {
 }
 
 
-def assert_no_marked_attributes(schema):
+def check_marked_attributes(schema):
     marked = set(schema["attributes"]) & MARKED_ATTRIBUTES
 
     if marked:
@@ -117,7 +115,7 @@ GOVERNMENT_ID_SCHEMA = {
         "expiry_date",
     ],
 }
-assert_no_marked_attributes(GOVERNMENT_ID_SCHEMA)
+check_marked_attributes(GOVERNMENT_ID_SCHEMA)
 
 EMPLOYMENT_SCHEMA = {
     "name": "EmploymentCredential",
@@ -129,7 +127,7 @@ EMPLOYMENT_SCHEMA = {
         "employed_since",
     ],
 }
-assert_no_marked_attributes(EMPLOYMENT_SCHEMA)
+check_marked_attributes(EMPLOYMENT_SCHEMA)
 
 RENTAL_PROOF_ALLOWED_ATTRIBUTES = {
     "employment_status",
@@ -139,7 +137,7 @@ RENTAL_PROOF_ALLOWED_ATTRIBUTES = {
 }
 
 
-def assert_request_is_use_case_appropriate(attributes, predicates):
+def check_use_case_scope(attributes, predicates):
     requested = {attribute["name"] for attribute in attributes.values()}
     requested |= {predicate["name"] for predicate in predicates.values()}
     not_allowed = requested - RENTAL_PROOF_ALLOWED_ATTRIBUTES
@@ -151,11 +149,12 @@ def assert_request_is_use_case_appropriate(attributes, predicates):
         )
 
 
-def assert_request_does_not_reveal_marked_attributes(attributes):
+def check_disclosure(attributes):
     revealed = {attribute["name"] for attribute in attributes.values()}
     not_allowed = revealed & (MARKED_ATTRIBUTES | PREDICATE_ONLY_ATTRIBUTES)
 
     if not_allowed:
         raise ValueError(
-            f"Proof request would reveal {sorted(not_allowed)} in cleartext, which this project's governance rules do not allow."
+            f"Proof request would reveal {sorted(not_allowed)} in cleartext, "
+            "which this project's governance rules do not allow."
         )

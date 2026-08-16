@@ -33,7 +33,7 @@ def _ensure_von_network_image():
 
     if not image_check.stdout.strip():
         print(
-            "Building the von-network image (only on first run), this can take a while) ..."
+            "Building the von-network image (only on first run, this can take a while) ..."
         )
         try:
             subprocess.run(["./manage", "build"], cwd=VON_NETWORK_DIR, check=True)
@@ -81,7 +81,7 @@ def _start_von_network():
         sys.exit("von-network could not be started.")
 
 
-def get_own_ip():
+def _get_own_ip():
     try:
         result = subprocess.run(
             ["hostname", "-I"], capture_output=True, text=True, timeout=10
@@ -94,7 +94,7 @@ def get_own_ip():
     return result.stdout.split()[0]
 
 
-def get_webserver_container_name():
+def _get_webserver_container_name():
     names = subprocess.run(
         ["docker", "ps", "--format", "{{.Names}}"],
         capture_output=True,
@@ -105,7 +105,7 @@ def get_webserver_container_name():
 
 
 def _restart_webserver():
-    webserver_name = get_webserver_container_name()
+    webserver_name = _get_webserver_container_name()
     if webserver_name:
         subprocess.run(
             ["docker", "restart", webserver_name], check=True, capture_output=True
@@ -244,7 +244,7 @@ def ensure_ledger_up():
 
     print("\nvon-network is up and ready.")
 
-    own_ip = get_own_ip()
+    own_ip = _get_own_ip()
     print("\nThe ledger browser page can be reached at: ")
     print("http://localhost:9000")
 

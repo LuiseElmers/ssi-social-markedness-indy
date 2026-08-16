@@ -6,14 +6,14 @@ import time
 
 from aca_client import ACAClient, ACAClientError
 from config import (
-    AGENT_READY_TIMEOUT,
-    AGENT_URLS,
-    CHECK_INTERVAL,
-    COMPOSE_UP_TIMEOUT,
+    AGENT_READY_TIMEOUT, 
+    AGENT_URLS, CHECK_INTERVAL, 
+    COMPOSE_UP_TIMEOUT, 
     VON_NETWORK_NAME,
 )
 from scripts.register_seeds import register_issuer_seeds
 from scripts.bootstrap import bootstrap
+
 
 SERVICES = [
     "issuer_government",
@@ -25,11 +25,7 @@ SERVICES = [
 
 def check_von_network():
     try:
-        subprocess.run(
-            ["docker", "network", "inspect", VON_NETWORK_NAME],
-            check=True,
-            capture_output=True,
-        )
+        subprocess.run(["docker", "network", "inspect", VON_NETWORK_NAME], check=True, capture_output=True)
     except subprocess.CalledProcessError:
         raise ACAClientError(f"Docker network '{VON_NETWORK_NAME}' was not found.")
     except FileNotFoundError:
@@ -40,26 +36,18 @@ def start_containers():
     print("Starting ACA-Py containers ...")
 
     try:
-        subprocess.run(
-            ["docker", "compose", "up", "-d", *SERVICES],
-            check=True,
-            timeout=COMPOSE_UP_TIMEOUT,
-        )
+        subprocess.run(["docker", "compose", "up", "-d", *SERVICES], check=True, timeout=COMPOSE_UP_TIMEOUT)
     except subprocess.TimeoutExpired:
-        raise ACAClientError(
-            f"'docker compose up' did not finish within {COMPOSE_UP_TIMEOUT} seconds."
-        )
+        raise ACAClientError(f"'docker compose up' did not finish within {COMPOSE_UP_TIMEOUT} seconds.")
     except subprocess.CalledProcessError:
         raise ACAClientError("Docker Compose could not start the ACA-Py containers.")
 
 
-def check_one_agent(agent, name, ready):
-    """Check one agent's /status and record the result."""
+def check_agent(agent, name, ready):
     ready[name] = agent.is_ready()
 
 
 def wait_for_all_agents():
-    """Wait until all four ACA-Py Admin APIs are reachable."""
     print("Waiting for ACA-Py agents (this can take a while on first start) ...")
 
     start = time.time()
@@ -70,7 +58,7 @@ def wait_for_all_agents():
         threads = []
         for name, url in AGENT_URLS.items():
             agent = ACAClient(name, url)
-            thread = threading.Thread(target=check_one_agent, args=(agent, name, ready))
+            thread = threading.Thread(target=check_agent, args=(agent, name, ready))
             threads.append(thread)
             thread.start()
         for thread in threads:
@@ -94,8 +82,7 @@ def wait_for_all_agents():
     raise ACAClientError("Not all ACA-Py agents became ready within the timeout.")
 
 
-def run_full_initialization():
-    """Run the startup steps in the correct order."""
+def run_initialization():
     steps = [
         ("Checking von-network", check_von_network),
         ("Registering issuer DIDs", register_issuer_seeds),
@@ -117,4 +104,4 @@ def run_full_initialization():
 
 
 if __name__ == "__main__":
-    run_full_initialization()
+    run_initialization()

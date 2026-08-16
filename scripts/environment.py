@@ -90,14 +90,14 @@ def _resolve_ports():
 
     if all(service in running_services for service in AGENT_SERVICES):
         print("ACA-Py containers are already running, keeping their current ports ...")
-        return
-    for key, default_port in AGENT_PORT_DEFAULTS.items():
-        resolved_port = find_free_port(default_port)
-        if resolved_port != default_port:
-            print(
-                f"Port {default_port} is busy, using {resolved_port} for {key} instead ..."
-            )
-        set_key(str(ENV_FILE), key, str(resolved_port))
+    else:
+        for key, default_port in AGENT_PORT_DEFAULTS.items():
+            resolved_port = find_free_port(default_port)
+            if resolved_port != default_port:
+                print(
+                    f"Port {default_port} is busy, using {resolved_port} for {key} instead ..."
+                )
+            set_key(str(ENV_FILE), key, str(resolved_port))
 
 
 def prepare_environment():
