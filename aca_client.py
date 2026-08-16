@@ -228,13 +228,9 @@ class ACAClient:
     def send_credential_offer(
         self, connection_id, cred_def_id, attributes, comment="Credential offer"
     ):
-        preview = [
-            {
-                "name": name,
-                "value": str(value),
-            }
-            for name, value in attributes.items()
-        ]
+        preview = []
+        for name, value in attributes.items():
+            preview.append({"name": name, "value": str(value)})
 
         return self.post(
             "/issue-credential-2.0/send-offer",

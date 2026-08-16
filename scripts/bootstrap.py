@@ -171,13 +171,13 @@ def bootstrap():
     """Create everything that is missing and save its IDs locally."""
     state = load_state()
 
-    # Cred def creation is CPU-heavy, so running Government and Employer
-    # stays sequential on purpose.
     government = ACAClient("Government", GOVERNMENT_URL)
     employer = ACAClient("Employer", EMPLOYER_URL)
     tenant = ACAClient("Tenant", TENANT_URL)
     landlord = ACAClient("Landlord", LANDLORD_URL)
 
+    # Cred def creation is CPU-heavy, so running Government and Employer
+    # stays sequential on purpose.
     government_schema_id = ensure_schema(government, GOVERNMENT_ID_SCHEMA)
     government_cred_def_id = ensure_credential_definition(
         government, government_schema_id, state.get("government_cred_def_id")

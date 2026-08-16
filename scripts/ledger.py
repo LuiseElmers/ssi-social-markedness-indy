@@ -212,12 +212,10 @@ def ledger_is_ready():
         von_network_name = dotenv_values(ENV_FILE).get("VON_NETWORK_NAME")
     von_network_name = von_network_name or "von_von"
 
-    network_exists = (
-        subprocess.run(
-            ["docker", "network", "inspect", von_network_name], capture_output=True
-        ).returncode
-        == 0
+    result = subprocess.run(
+        ["docker", "network", "inspect", von_network_name], capture_output=True
     )
+    network_exists = result.returncode == 0
     if not network_exists:
         return False
 

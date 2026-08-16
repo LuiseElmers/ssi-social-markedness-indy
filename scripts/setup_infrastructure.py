@@ -6,14 +6,14 @@ import time
 
 from aca_client import ACAClient, ACAClientError
 from config import (
-    AGENT_READY_TIMEOUT, 
-    AGENT_URLS, CHECK_INTERVAL, 
-    COMPOSE_UP_TIMEOUT, 
+    AGENT_READY_TIMEOUT,
+    AGENT_URLS,
+    CHECK_INTERVAL,
+    COMPOSE_UP_TIMEOUT,
     VON_NETWORK_NAME,
 )
 from scripts.register_seeds import register_issuer_seeds
 from scripts.bootstrap import bootstrap
-
 
 SERVICES = [
     "issuer_government",
@@ -25,7 +25,11 @@ SERVICES = [
 
 def check_von_network():
     try:
-        subprocess.run(["docker", "network", "inspect", VON_NETWORK_NAME], check=True, capture_output=True)
+        subprocess.run(
+            ["docker", "network", "inspect", VON_NETWORK_NAME],
+            check=True,
+            capture_output=True,
+        )
     except subprocess.CalledProcessError:
         raise ACAClientError(f"Docker network '{VON_NETWORK_NAME}' was not found.")
     except FileNotFoundError:
@@ -36,9 +40,15 @@ def start_containers():
     print("Starting ACA-Py containers ...")
 
     try:
-        subprocess.run(["docker", "compose", "up", "-d", *SERVICES], check=True, timeout=COMPOSE_UP_TIMEOUT)
+        subprocess.run(
+            ["docker", "compose", "up", "-d", *SERVICES],
+            check=True,
+            timeout=COMPOSE_UP_TIMEOUT,
+        )
     except subprocess.TimeoutExpired:
-        raise ACAClientError(f"'docker compose up' did not finish within {COMPOSE_UP_TIMEOUT} seconds.")
+        raise ACAClientError(
+            f"'docker compose up' did not finish within {COMPOSE_UP_TIMEOUT} seconds."
+        )
     except subprocess.CalledProcessError:
         raise ACAClientError("Docker Compose could not start the ACA-Py containers.")
 

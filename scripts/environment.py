@@ -88,7 +88,12 @@ def _resolve_ports():
         text=True,
     ).stdout.split()
 
-    if all(service in running_services for service in AGENT_SERVICES):
+    all_running = True
+    for service in AGENT_SERVICES:
+        if service not in running_services:
+            all_running = False
+
+    if all_running:
         print("ACA-Py containers are already running, keeping their current ports ...")
     else:
         for key, default_port in AGENT_PORT_DEFAULTS.items():

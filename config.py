@@ -138,8 +138,11 @@ RENTAL_PROOF_ALLOWED_ATTRIBUTES = {
 
 
 def check_use_case_scope(attributes, predicates):
-    requested = {attribute["name"] for attribute in attributes.values()}
-    requested |= {predicate["name"] for predicate in predicates.values()}
+    requested = set()
+    for attribute in attributes.values():
+        requested.add(attribute["name"])
+    for predicate in predicates.values():
+        requested.add(predicate["name"])
     not_allowed = requested - RENTAL_PROOF_ALLOWED_ATTRIBUTES
 
     if not_allowed:
@@ -150,7 +153,9 @@ def check_use_case_scope(attributes, predicates):
 
 
 def check_disclosure(attributes):
-    revealed = {attribute["name"] for attribute in attributes.values()}
+    revealed = set()
+    for attribute in attributes.values():
+        revealed.add(attribute["name"])
     not_allowed = revealed & (MARKED_ATTRIBUTES | PREDICATE_ONLY_ATTRIBUTES)
 
     if not_allowed:

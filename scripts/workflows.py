@@ -278,7 +278,6 @@ def show_landlord_proof_request():
 
 
 def check_proof_eligibility(employment_info, government_info):
-
     problems = []
 
     if not employment_info:
@@ -304,9 +303,7 @@ def check_proof_eligibility(employment_info, government_info):
 
 def landlord_decision(verified):
     if verified:
-        message = (
-            "Application accepted. All required criteria were proven and verified."
-        )
+        message = ("Application accepted. All required criteria were proven and verified.")
     else:
         message = "Application not accepted. The proof could not be verified against the required criteria."
 

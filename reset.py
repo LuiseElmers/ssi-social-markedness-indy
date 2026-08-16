@@ -16,8 +16,7 @@ if answer != "reset":
     sys.exit(0)
 
 delete_ledger = (
-    input("Also delete the Indy ledger (von-network)? [Y/N]: ").strip().lower()
-    == "y"
+    input("Also delete the Indy ledger (von-network)? [Y/N]: ").strip().lower() == "y"
 )
 
 print("Wiping the SSI agents ...")
