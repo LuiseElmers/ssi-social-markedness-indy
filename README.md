@@ -5,136 +5,211 @@ privacy-preserving rental application. It includes a real 4-node Indy ledger
 (von-network) as part of the repository, so no separate infrastructure setup
 is needed.
 
-## Two-step start: ledger once, prototype every time
+## Platform notice: use Linux
 
-Starting a 4-node Indy ledger from cold is the slow part of this project --
-on an emulated host (e.g. Apple Silicon running the project's `linux/amd64`
-images) it can take several minutes for the nodes to find consensus. That
-cost only needs to be paid **once per work session**, not on every test run
-or demo -- so ledger startup and prototype startup are two separate scripts:
+The local Indy ledger (von-network) has a known startup problem under Docker
+Desktop on macOS and Windows: the ledger webserver tries to connect to the
+four consensus nodes before they have finished syncing, and that connection
+attempt can fail permanently, even after retries. This is documented as an
+open, unresolved issue in von-network's own repository
+([bcgov/von-network#192](https://github.com/bcgov/von-network/issues/192)),
+not something specific to this project.
+
+Native Linux does not have this problem, since Docker runs directly on the
+system there instead of inside the hidden VM that Docker Desktop needs on
+macOS and Windows. **Running this prototype on Linux, or in a Linux VM, is
+the recommended and tested way to run it.**
+
+For step-by-step instructions on setting up a Linux environment (Vagrant,
+UTM, or a ready-made VM), see [LINUX_SETUP.md](./LINUX_SETUP.md).
+
+## Requirements
+
+Docker, Python 3.10+ and git are needed. This project is tested and
+recommended on Linux:
+
+- [Docker Engine + the Compose plugin](https://docs.docker.com/engine/install/)
+- [Python 3.10 or newer](https://www.python.org/downloads/)
+- [git](https://git-scm.com/downloads)
+
+If you are already on Linux, install the three items above directly, then continue
+with "Starting the prototype" below.
+
+If you are not on Linux, see [LINUX_SETUP.md](./LINUX_SETUP.md) for how to set up a
+working Linux environment on Windows or macOS first (Vagrant, UTM, or a
+ready-made VM), then follow the same steps inside it.
+
+## Starting the prototype
 
 ```bash
-git clone --recurse-submodules <repository-url>
-cd <repository>
+git clone --recurse-submodules https://github.com/LuiseElmers/ssi-social-markedness-indy.git
+cd ssi-social-markedness-indy
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
-python3 ledger_up.py   # once per session (after a reboot, or the first time)
-python3 start.py       # every time you want the prototype -- fast
+python3 main.py
 ```
 
-If you already cloned without `--recurse-submodules`, `ledger_up.py`
-fetches von-network for you on its first run -- no manual clone of a
-separate von-network repository is needed either way, and cloning it
-separately would not be any faster: it's the same Docker images and the
-same emulation either way. The speed comes purely from **not** tearing the
-ledger down and rebuilding it between runs.
+The whole start procedure is done via one command: main.py checks whether
+von-network is already running and starts it itself if it is not, so
+there is no separate ledger step to remember or run first.
 
-**`ledger_up.py`** (slow, run once per session):
+The first run includes a cold start of the 4-node Indy ledger, which took
+about 10 minutes during development. The console prints the progress the whole time.
+Every run after that is much faster (only a few seconds) since the ledger and agent
+containers stay up between runs.
 
-1. Creates `.env` from `.env.example` if it doesn't exist yet.
-2. Fetches von-network (git submodule) if it isn't there yet.
-3. Starts von-network's `webserver`, `node1`-`node4` containers via its own
-   `./manage start` script -- the same containers and startup logic the
-   von-network project itself uses and tests, not a reimplementation. If
-   they're already running unchanged, this is an instant no-op.
-4. Waits for the ledger to answer (this is the step that can take several
-   minutes on a cold start), then fetches the current `genesis.txn` from it.
-5. Discovers the Docker network von-network created and writes it into
-   `.env` as `VON_NETWORK_NAME`.
+If the repository was cloned without `--recurse-submodules`, main.py
+fetches von-network on its own on the first run.
 
-Leave the containers running after this finishes -- don't run it again just
-to start the prototype.
+main.py always runs the same sequence:
 
-**`start.py`** (fast, run every time):
+1. Check whether von-network is up, start it if not.
+2. Prepare `.env` and resolve free host ports for the four agents.
+3. Start the Government, Employer, Tenant and Landlord containers.
+4. Wait for all four ACA-Py agents to answer on /status.
+5. Register the two issuer DIDs (Government, Employer) on the ledger.
+6. Create missing schemas, credential definitions and connections.
+7. Show the CLI menu.
 
-1. Checks that von-network is already up and ready (a couple of seconds).
-   If it isn't, this fails immediately with a pointer back to `ledger_up.py`
-   instead of waiting or trying to start it itself.
-2. Resolves free host ports for the four agents if the defaults are busy.
-3. Runs `main.py`, which performs the existing SSI startup sequence.
+The IDs created during setup are stored in `runtime/state.json`, so a
+second start does not recreate schemas or connections.
 
-`main.py` itself is unchanged and always performs the same sequence:
+Tenant and Landlord do not need a ledger write role, they use DIDComm peer
+DIDs. Only Government and Employer write schemas and credential
+definitions.
 
-1. Check that the von-network Docker network exists.
-2. Start the Government, Employer, Tenant and Landlord containers.
-3. Poll each ACA-Py `/status` endpoint (all four in parallel) until they answer.
-4. Register the two issuer DIDs on the ledger.
-5. Create missing schemas, credential definitions and connections.
-6. Show the CLI menu.
+## What the prototype does
 
-The IDs created during setup are stored in `runtime/state.json`. Therefore a
-second start does not create new schemas or connections.
+The CLI menu covers the full Issuer to Holder to Verifier flow for the
+rental use case. The Government and Employer act as issuers, the Tenant
+is the holder, and the Landlord is the verifier. From the menu, the
+Tenant requests a Digital ID credential from the Government and an
+Employment credential from the Employer, then sends a proof to the
+Landlord. That proof reveals only the employment status in plain text:
+income, age and ID validity are proven through zero-knowledge predicates
+instead of disclosing the actual values (for example, proving the income
+is at least 2500 without revealing the exact number). The Landlord's
+proof request itself can also be inspected from the menu before sending
+anything, to see exactly what would be disclosed.
 
-Tenant and Landlord do not need a ledger write role. They use DIDComm peer DIDs;
-only Government and Employer write schemas and credential definitions.
+## Viewing the ledger
+
+Once von-network is up:
+
+```
+http://localhost:9000
+```
+
+This is von-network's own ledger browser. It shows the schemas and
+credential definitions written during setup, transaction details, and pool
+status. It is separate from the prototype's CLI menu and stays reachable as
+long as the containers run, so it can be opened anytime during or after a
+demo. main.py also prints this URL once the ledger is ready.
 
 ## Resetting
 
-`python3 start.py` is safe to run repeatedly: the four agent wallets are kept.
+`python3 main.py` is safe to run several times and the four agent wallets
+stay intact.
 
-To wipe the agent wallets and `runtime/state.json` and start the prototype
-fresh, run:
+To wipe the agent wallets and `runtime/state.json` and start fresh:
 
 ```bash
 python3 reset.py
 ```
 
-This asks for explicit confirmation before deleting anything, so a normal
-`python3 start.py` can never accidentally trigger a reset. It then separately
-asks whether to also wipe the Indy ledger itself (von-network) -- default is
-no, since that forces the slow rebuild `ledger_up.py`/`start.py` are split up
-to avoid paying repeatedly, and is rarely actually necessary: schemas and
-credential definitions live in the ledger, but which ones an agent can still
-use is governed by its wallet, which this always resets. Only choose to also
-wipe the ledger if you specifically need a truly empty one (e.g. starting a
-new demo environment from scratch). If you do, run `ledger_up.py` again
-before `start.py`.
+This asks for confirmation before deleting anything, so a normal
+`python3 main.py` cannot accidentally trigger a reset. Whether to also
+wipe the ledger is asked separately, default is no, since wiping it
+means having to run the slow rebuild from the beginning. Schemas and credential
+definitions stay on the ledger, only the agent wallets get deleted here.
+Wipe the ledger too only if an empty one is really needed, the next
+`python3 main.py` then runs the full cold start again.
 
 ## Ports and resources
 
-Only the ports actually needed on the host are published: the four ACA-Py
-Admin/inbound port pairs (8021-8052, or whatever `start.py` moved them to if
-the defaults were busy), von-network's webserver on `9000` (used both for
-the demo ledger browser and for the `/register` and `/genesis` endpoints
-this project's own code calls), and the eight Indy node ports (`9701`-`9708`)
-von-network's own compose file publishes by default. `--admin-insecure-mode`
-on the ACA-Py agents is a deliberate, documented choice for this local
-prototype, not something to carry over into any non-local deployment.
+Only the ports actually needed on the host get published: the four ACA-Py
+Admin/inbound port pairs (8021-8052, or wherever main.py moved them if the
+defaults were busy), von-network's webserver on `9000` (used for the ledger
+browser above and for the `/register` and `/genesis` endpoints that are called), 
+and the eight Indy node ports (`9701`-`9708`) von-network's own
+compose file publishes. `--admin-insecure-mode` on the ACA-Py agents is a
+deliberate choice for this local prototype.
 
 A full 4-node Indy pool is the minimum for a real Byzantine-fault-tolerant
-ledger (3f+1 nodes tolerate f faults, so 4 nodes for f=1) -- there isn't a
-smaller "lightweight" node count without changing that property, so this
-project doesn't offer one. What you can safely reduce on a constrained
-machine is Docker's own CPU/RAM allocation (see your Docker/VM settings);
-the prototype doesn't need to reserve resources beyond what Docker itself
-is configured to use.
+ledger (3f+1 nodes tolerate f faults, so 4 nodes for f=1), there is no
+smaller option without changing that property. What can be reduced on a machine
+is the CPU/RAM assigned to Docker itself. On native Linux that is set directly 
+on the host machine, inside a VM by the VM's own resource settings. The prototype itself does
+not need more than that.
 
-## Troubleshooting on Apple Silicon (Docker Desktop / UTM)
+## Troubleshooting
 
-The images in this project are `linux/amd64` and therefore run emulated on
-Apple Silicon, which is the dominant source of slow or flaky starts. If
-`ledger_up.py` repeatedly can't get the ledger ready:
+If the setup process gets stuck, the best option is to run
+`python3 reset.py`, choose not to delete the ledger when asked, then
+`python3 main.py` again.
 
-- In Docker Desktop, check **Settings > General > "Use Rosetta for
-  x86_64/amd64 emulation on Apple Silicon"** -- without it, Docker falls
-  back to full QEMU emulation, which is markedly slower.
-- Check **Settings > Resources** (CPU/RAM) -- four emulated Indy nodes plus
-  the webserver competing for too little CPU is a common cause of a pool
-  that never finishes finding consensus.
-- If containers are left in a broken state after a failed attempt:
-  ```bash
-  docker compose down
-  cd von-network && ./manage down && cd ..
-  python3 ledger_up.py
-  ```
+This keeps the ledger running (unless told otherwise during the reset), so usually 
+another cold start is not necessary.
+
+To check whether the four agents are actually reachable, run the following from the project
+directory:
+
+```bash
+docker compose ps
+```
+
+This shows whether the containers are running at all. If they are but something
+still seems wrong, access the Admin API directly:
+
+```bash
+curl -s http://localhost:8032/status   # Government
+curl -s http://localhost:8022/status   # Employer
+curl -s http://localhost:8042/status   # Tenant
+curl -s http://localhost:8052/status   # Landlord
+```
+
+(ports may be different if the default ports were already occupied, check `.env` for the
+actual values). A working agent answers with JSON containing a `version`
+field. No response or a connection error means that agent is not up yet or
+crashed.
+
+**If the ledger stays stuck on "not ready" for a long time**, this is
+most likely the Docker Desktop issue described in the platform notice
+at the top of this document:
+
+```bash
+curl -s http://localhost:9000/status
+```
+
+If this repeatedly shows `"init_error": "Error initializing pool ledger"`,
+that is the issue. Switching to Linux (see [LINUX_SETUP.md](./LINUX_SETUP.md))
+is the only reliable fix found so far; von-network's own suggested
+workaround (`./manage stop` followed by `./manage start` from the
+`von-network/` directory) sometimes helps but did not reliably fix this
+during testing.
+
+**On Apple Silicon**, running inside a Linux VM (see
+[LINUX_SETUP.md](./LINUX_SETUP.md)), the images here are linux/amd64 and
+run emulated, which is the main source of slow starts, separate from the
+Docker Desktop issue above. If things are slow but do eventually finish,
+check the VM's assigned CPU/RAM in its own settings, four emulated Indy
+nodes plus the webserver fighting over too little CPU is a common reason
+the pool never finds consensus.
+
+If containers are stuck in a broken state after a failed attempt:
+
+```bash
+docker compose down
+cd von-network && ./manage down && cd ..
+python3 main.py
+```
 
 ## Advanced / manual start
 
-If you want to run von-network with different options (see
-`von-network/manage`), start it yourself first (`./manage start` from the
-`von-network/` directory), then set `VON_NETWORK_NAME` in `.env` to
-whatever Docker network it created, and run `python3 main.py` directly
-instead of `python3 start.py`.
-
+To run von-network with different options (see `von-network/manage`),
+start it yourself first (`./manage start` from the `von-network/`
+directory), then set `VON_NETWORK_NAME` in `.env` to whatever Docker
+network it created, and run `python3 main.py` as usual. It detects the
+already-running ledger and skips straight to the agent setup.
