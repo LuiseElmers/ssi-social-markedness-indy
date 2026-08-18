@@ -114,9 +114,7 @@ def _restart_webserver():
 
 
 def _wait_for_ledger_ready():
-    print(
-        "Waiting for the von-network ledger to answer (this can take several minutes on a fresh start) ..."
-    )
+    print("Waiting for the von-network ledger to answer ...")
     ledger_ready = False
     attempts = 900  # 30 minutes, 2s for each iteration
     RESTART_AFTER = 90
@@ -243,8 +241,7 @@ def ensure_ledger_up():
     print("\nvon-network is up and ready.")
 
     own_ip = _get_own_ip()
-    print("\nThe ledger browser page can be reached at: ")
-    print("http://localhost:9000")
+    print("\nThe ledger browser page can be reached at http://localhost:9000")
 
     if own_ip and own_ip != "127.0.0.1":
-        print(f"  http://{own_ip}:9000")
+        print(f"(or, from another device on this network, at http://{own_ip}:9000)")
