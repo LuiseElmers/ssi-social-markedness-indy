@@ -7,3 +7,7 @@ __pycache__/
 runtime/state.json
 dev_reset.py
 genesis.txn
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
