@@ -7,6 +7,8 @@ from config import (
     EMPLOYER_URL,
     GOVERNMENT_URL,
     LANDLORD_URL,
+    RENTAL_MIN_AGE_YEARS,
+    RENTAL_MIN_MONTHLY_NET_INCOME,
     TENANT_URL,
     check_disclosure,
     check_use_case_scope,
@@ -29,8 +31,8 @@ ATTRIBUTE_LABELS = {
 }
 
 PREDICATE_DESCRIPTIONS = {
-    "income_at_least_2500": "Monthly Net Income >= 2500",
-    "of_legal_age": "Is of legal age (18+)",
+    "income_at_least_2500": f"Monthly Net Income >= {RENTAL_MIN_MONTHLY_NET_INCOME}",
+    "of_legal_age": f"Is of legal age ({RENTAL_MIN_AGE_YEARS}+)",
     "id_not_expired": "Digital ID is still valid",
 }
 
@@ -67,10 +69,10 @@ def today_as_int():
 def legal_age_cutoff():
     today = date.today()
     try:
-        cutoff = today.replace(year=today.year - 18)
+        cutoff = today.replace(year=today.year - RENTAL_MIN_AGE_YEARS)
     except ValueError:
         # For leap year
-        cutoff = today.replace(year=today.year - 18, day=28)
+        cutoff = today.replace(year=today.year - RENTAL_MIN_AGE_YEARS, day=28)
     return int(cutoff.strftime("%Y%m%d"))
 
 
@@ -213,7 +215,7 @@ def landlord_proof_criteria(employment_cred_def_id, government_cred_def_id):
         "income_at_least_2500": {
             "name": "monthly_net_income",
             "p_type": ">=",
-            "p_value": 2500,
+            "p_value": RENTAL_MIN_MONTHLY_NET_INCOME,
             "restrictions": employment_restriction,
         },
         "of_legal_age": {
@@ -293,13 +295,16 @@ def check_proof_eligibility(employment_info, government_info):
 
     if employment_info:
         income = int(employment_info["attrs"].get("monthly_net_income", 0))
-        if income < 2500:
-            problems.append(f"Monthly net income is {income}, below the required 2500.")
+        if income < RENTAL_MIN_MONTHLY_NET_INCOME:
+            problems.append(
+                f"Monthly net income is {income}, below the required "
+                f"{RENTAL_MIN_MONTHLY_NET_INCOME}."
+            )
 
     if government_info:
         birth_date = int(government_info["attrs"].get("date_of_birth", 0))
         if birth_date > legal_age_cutoff():
-            problems.append("Not yet of legal age (18+).")
+            problems.append(f"Not yet of legal age ({RENTAL_MIN_AGE_YEARS}+).")
         expiry_date = int(government_info["attrs"].get("expiry_date", 0))
         if expiry_date < today_as_int():
             problems.append("Digital ID has expired.")
@@ -344,12 +349,9 @@ def generate_proof():
 
     submitted = state.get("rental_proof_submission")
     if submitted:
-        print("\nA rental proof was already submitted to the Landlord:")
-        print_disclosure_preview(
-            submitted["attributes"],
-            submitted["predicates"],
-            submitted["attrs"],
-            already_sent=True,
+        print(
+            "\nA rental proof was already submitted to the Landlord. "
+            "The disclosed scope is shown under the proof request view."
         )
         return
 
@@ -405,9 +407,5 @@ def generate_proof():
     decision_message = landlord_decision(result.get("verified") in (True, "true"))
     landlord.send_basic_message(connection["issuer"], decision_message)
 
-    state["rental_proof_submission"] = {
-        "attributes": attributes,
-        "predicates": predicates,
-        "attrs": attrs,
-    }
+    state["rental_proof_submission"] = {"submitted": True}
     save_state(state)

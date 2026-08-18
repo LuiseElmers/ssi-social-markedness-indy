@@ -1,4 +1,4 @@
-"""Start (or resume) the von-network Indy ledger and check if it's ready."""
+"""Start (or resume) the von-network Indy ledger and check if it is ready."""
 
 import subprocess
 import sys
@@ -101,7 +101,10 @@ def _get_webserver_container_name():
         text=True,
         check=True,
     ).stdout.splitlines()
-    return next((n for n in names if "webserver" in n), None)
+    for name in names:
+        if "webserver" in name:
+            return name
+    return None
 
 
 def _restart_webserver():
@@ -114,7 +117,9 @@ def _restart_webserver():
 
 
 def _wait_for_ledger_ready():
-    print("Waiting for the von-network ledger to answer ...")
+    print(
+        "Waiting for the von-network ledger to answer ..."
+    )
     ledger_ready = False
     attempts = 900  # 30 minutes, 2s for each iteration
     RESTART_AFTER = 90

@@ -70,7 +70,10 @@ def _fill_missing_values():
             env_file.write("\n" + "\n".join(lines_to_add) + "\n")
 
     current_values = dotenv_values(ENV_FILE)
-    still_missing = [key for key in REQUIRED_KEYS if not current_values.get(key)]
+    still_missing = []
+    for key in REQUIRED_KEYS:
+        if not current_values.get(key):
+            still_missing.append(key)
 
     if still_missing:
         sys.exit(

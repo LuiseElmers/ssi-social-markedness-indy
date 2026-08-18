@@ -20,7 +20,7 @@ def check_docker():
 
 
 def ensure_env_file():
-    """Create .env from .env.example if .env doesn't exist yet."""
+    """Create .env from .env.example if .env does not exist yet."""
     if not ENV_FILE.exists():
         if not ENV_EXAMPLE_FILE.exists():
             sys.exit(f"{ENV_EXAMPLE_FILE} is missing.")

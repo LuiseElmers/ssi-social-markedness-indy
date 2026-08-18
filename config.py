@@ -129,6 +129,9 @@ EMPLOYMENT_SCHEMA = {
 }
 check_marked_attributes(EMPLOYMENT_SCHEMA)
 
+RENTAL_MIN_MONTHLY_NET_INCOME = 2500
+RENTAL_MIN_AGE_YEARS = 18
+
 RENTAL_PROOF_ALLOWED_ATTRIBUTES = {
     "employment_status",
     "monthly_net_income",

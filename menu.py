@@ -11,7 +11,7 @@ from scripts.workflows import (
     show_landlord_proof_request,
 )
 
-# Small pause after menu actions so output doesn't scroll by too fast
+# Small pause after menu actions so output does not scroll by too fast
 MENU_PAUSE_SECONDS = 0.3
 
 
@@ -39,7 +39,7 @@ def submenu_rental_application_process():
         print("-" * 57)
         print(" [1] View landlord's proof request")
         print(" [2] Request employment credential from employer")
-        print(" [3] Request digital id from government agency")
+        print(" [3] Request digital ID from government agency")
         print(" [4] Send minimal rental proof")
         print(" [X] Back to main menu")
         print("-" * 57)
