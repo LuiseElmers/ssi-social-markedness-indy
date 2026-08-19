@@ -39,6 +39,18 @@ def test_format_date_converts_yyyymmdd_to_iso():
 
 def test_format_date_leaves_non_date_values_untouched():
     assert workflows.format_date("permanent") == "permanent"
+    
+
+def test_format_value_translates_is_employed_to_yes():
+    assert workflows.format_value("is_employed", "1") == "Yes"
+    
+    
+def test_format_value_translates_is_employed_to_no():
+    assert workflows.format_value("is_employed", "0") == "No"
+    
+    
+def test_format_value_falls_back_to_format_date_for_other_names():
+    assert workflows.format_value("date_of_birth", "19950514") == "1995-05-14"
 
 
 def test_get_value_returns_present_field():
@@ -93,13 +105,13 @@ def test_find_credential_by_cred_def_returns_matching_credential():
             {
                 "cred_info": {
                     "cred_def_id": "cd-1",
-                    "attrs": {"employment_status": "permanent"},
+                    "attrs": {"is_employed": "1"},
                 }
             }
         ]
     )
     info = workflows.find_credential_by_cred_def(tenant, "cd-1")
-    assert info["attrs"]["employment_status"] == "permanent"
+    assert info["attrs"]["is_employed"] == "1"
 
 
 def test_find_credential_by_cred_def_returns_none_when_absent():
@@ -113,13 +125,14 @@ def test_has_credential_true_and_false():
     assert workflows.has_credential(tenant, "cd-2") is False
 
 
-def test_landlord_proof_criteria_only_reveals_employment_status():
+def test_landlord_proof_criteria_reveals_no_attributes():
     attributes, predicates = workflows.landlord_proof_criteria("emp-cd", "gov-cd")
-    assert list(attributes.keys()) == ["employment_status"]
+    assert attributes == {}
 
 
 def test_landlord_proof_criteria_contains_all_three_predicates():
     attributes, predicates = workflows.landlord_proof_criteria("emp-cd", "gov-cd")
+    assert "currently_employed" in predicates
     assert "income_at_least_2500" in predicates
     assert "of_legal_age" in predicates
     assert "id_not_expired" in predicates
@@ -127,6 +140,7 @@ def test_landlord_proof_criteria_contains_all_three_predicates():
 
 def test_landlord_proof_criteria_restricts_predicates_to_the_right_cred_def():
     attributes, predicates = workflows.landlord_proof_criteria("emp-cd", "gov-cd")
+    assert predicates["currently_employed"]["restrictions"] == [{"cred_def_id": "emp-cd"}]
     assert predicates["income_at_least_2500"]["restrictions"] == [
         {"cred_def_id": "emp-cd"}
     ]
@@ -154,7 +168,7 @@ def test_eligibility_reports_both_credentials_missing():
 
 
 def test_eligibility_flags_income_below_threshold():
-    employment_info = {"attrs": {"monthly_net_income": "1000"}}
+    employment_info = {"attrs": {"is_employed": "1", "monthly_net_income": "1000"}}
     government_info = {
         "attrs": {
             "date_of_birth": str(workflows.legal_age_cutoff() - 10000),
@@ -166,7 +180,7 @@ def test_eligibility_flags_income_below_threshold():
 
 
 def test_eligibility_flags_underage_applicant():
-    employment_info = {"attrs": {"monthly_net_income": "3200"}}
+    employment_info = {"attrs": {"is_employed": "1", "monthly_net_income": "3200"}}
     government_info = {
         "attrs": {
             "date_of_birth": str(workflows.today_as_int()),
@@ -178,7 +192,7 @@ def test_eligibility_flags_underage_applicant():
 
 
 def test_eligibility_flags_expired_id():
-    employment_info = {"attrs": {"monthly_net_income": "3200"}}
+    employment_info = {"attrs": {"is_employed": "1", "monthly_net_income": "3200"}}
     government_info = {
         "attrs": {
             "date_of_birth": str(workflows.legal_age_cutoff() - 10000),
@@ -187,10 +201,22 @@ def test_eligibility_flags_expired_id():
     }
     problems = workflows.check_proof_eligibility(employment_info, government_info)
     assert contains_text(problems, "expired")
+    
+    
+def test_eligibility_flags_not_employed():
+    employment_info = {"attrs": {"is_employed": "0", "monthly_net_income": "3200"}}
+    government_info = {
+        "attrs": {
+            "date_of_birth": str(workflows.legal_age_cutoff() - 10000),
+            "expiry_date": "20000101",
+        }
+    }
+    problems = workflows.check_proof_eligibility(employment_info, government_info)
+    assert contains_text(problems, "employed")
 
 
 def test_eligibility_passes_with_no_problems():
-    employment_info = {"attrs": {"monthly_net_income": "3200"}}
+    employment_info = {"attrs": {"is_employed": "1", "monthly_net_income": "3200"}}
     government_info = {
         "attrs": {
             "date_of_birth": str(workflows.legal_age_cutoff() - 10000),
@@ -202,7 +228,7 @@ def test_eligibility_passes_with_no_problems():
 
 
 def test_eligibility_income_exactly_at_threshold_is_not_a_problem():
-    employment_info = {"attrs": {"monthly_net_income": "2500"}}
+    employment_info = {"attrs": {"is_employed": "1", "monthly_net_income": "2500"}}
     government_info = {
         "attrs": {
             "date_of_birth": str(workflows.legal_age_cutoff() - 10000),

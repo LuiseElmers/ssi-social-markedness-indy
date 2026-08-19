@@ -8,7 +8,9 @@ plus a fallback.
 
 Provided options:
 
-- **Already on Linux**: skip to "Running the prototype" below.
+- **Already on Linux**: no VM needed, see the main
+  [README](./README.md#requirements), "Requirements" section, for
+  installing the three tools directly, then "Starting the prototype".
 - **Windows or Intel/AMD macOS**: use Vagrant (Option A).
 - **Apple Silicon Mac** (this is the exact environment this project was
   developed and tested in): use UTM (Option B).
@@ -36,17 +38,28 @@ already installed.
 
 **3. Windows only: check for a Hyper-V/WSL2 conflict**
 
-If VirtualBox complains about VT-x or virtualization when creating a VM,
-Hyper-V or WSL2 is likely already active and blocking it. To fix:
+If VirtualBox warns about VT-x or virtualization when creating a VM,
+Hyper-V or WSL2 is probably already active and blocking it. To fix this:
 
-1. Open Windows search, type "Windows-Features aktivieren oder deaktivieren" ("Turn Windows features on or off").
-2. Uncheck "Hyper-V" and "Windows-Subsystem für Linux" (Windows Subsystem for Linux).
+1. Open Windows search, type "Turn Windows features on or off".
+2. Uncheck "Hyper-V" and "Windows Subsystem for Linux".
 3. Restart the machine.
 
 **4. Set up the project folder**
 
-Create a new, empty folder, e.g. `ssi-prototype-vm`, and place the
-`Vagrantfile` below inside it:
+This folder goes on the host operating system, the normal Windows or
+macOS desktop or documents folder, not inside a VM. VirtualBox itself
+needs nothing set up yet, Vagrant configures the actual VM automatically
+in the next step.
+
+1. Create a new, empty folder, e.g. `ssi-prototype-vm`.
+2. Open any text editor (Notepad, Notepad++, VS Code, or similar) and
+   paste in the code snippet below.
+3. Save the file inside that folder as exactly `Vagrantfile` with a capital V
+   and no file extension.
+   - Windows Notepad: set "Save as type" to "All Files (\*.\*)" first,
+     otherwise Windows silently appends `.txt`.
+   - Notepad++: set the same dropdown to "All types (\*.\*)".
 
 ```ruby
 Vagrant.configure("2") do |config|
@@ -82,19 +95,24 @@ end
 - Windows: PowerShell or Command Prompt.
 - macOS: Terminal.app or any other terminal.
 
-Navigate to the folder:
+Navigate to the folder. `<path-to-the-folder>` below is a placeholder,
+replace it with the actual location chosen in step 4, for example
+`C:\Users\<name>\Desktop\ssi-prototype-vm`:
 
-    cd Path\to\ssi-prototype-vm
+    cd <path-to-the-folder>
 
-(macOS: `cd /path/to/ssi-prototype-vm`. If the path contains spaces, wrap it in quotes on either platform.)
+(macOS: `cd <path-to-the-folder>`, for example `/Users/<name>/Desktop/ssi-prototype-vm`.
+If the path contains spaces, wrap it in quotes on either platform.)
 
 
 **6. Build the VM**
+
+Inside the terminal, type:
 ```
 vagrant up
 ```
 
-Downloads a small Ubuntu base image on first run, then installs Docker,
+This downloads a small Ubuntu base image on first run, then installs Docker,
 git and Python inside it automatically. Takes a few minutes depending on
 the internet connection.
 
@@ -107,18 +125,12 @@ From here on, this is a normal Linux terminal.
 
 **8. Continue with "Running the prototype" below, inside this terminal.**
 
-### Viewing the ledger browser
-
-Once the ledger is up, `http://localhost:9000` can be opened directly in
-the host machine's normal browser (Windows/macOS), no extra step needed,
-thanks to the port forwarding set up in the Vagrantfile.
-
 ### Stopping / resuming later
 
 ```
-vagrant halt      # stop the VM, keeps everything as is
-vagrant up        # start it again later
-vagrant destroy   # delete the VM completely
+vagrant halt      # stops the VM and keeps everything as it is
+vagrant up        # starts it again 
+vagrant destroy   # deletes the VM 
 ```
 
 ## Option B: UTM (Apple Silicon Mac)
@@ -150,7 +162,7 @@ This matches the tested setup and the linux/amd64 Docker images this project use
 
 **4. Install Ubuntu**
 
-Follow the on-screen Ubuntu installer (standard options are fine), create
+Follow the on-screen Ubuntu installer (choose the standard options), create
 a user account, restart when prompted.
 
 **5. Install Docker, git and Python inside the VM**
@@ -176,10 +188,15 @@ recognized as part of the `docker` group.
 
 **6. Continue with "Running the prototype" below, inside the VM's terminal.**
 
-**7. Viewing the ledger browser**
+### Stopping / resuming / deleting later
 
-Since the browser inside the Ubuntu VM works normally, `http://localhost:9000`
-can be opened directly there and no extra networking setup is needed.
+Stopping and resuming: use UTM's own controls, the stop button pauses or
+shuts down the VM and keeps everything as it is. The start (play) button
+resumes it later.
+
+Deleting the VM entirely: in UTM's VM list, right-click the VM (or select
+it and use the menu) and choose "Delete". This removes the VM and its
+virtual disk. It does not touch anything on the Mac host outside UTM.
 
 ## Option C: Ready-made VM copy
 
@@ -188,24 +205,12 @@ VM (UTM format) with this project already set up is also provided, which
 can only be imported and opened with UTM, not VirtualBox or other
 virtualization tools. The login details are provided separately.
 
+Stopping, resuming and deleting this VM works the same way as in Option B, 
+see "Stopping / resuming / deleting later" above.
+
 ## Running the prototype
 
-Once inside a Linux environment:
-
-```bash
-git clone --recurse-submodules https://github.com/LuiseElmers/ssi-social-markedness-indy.git
-cd ssi-social-markedness-indy
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-python3 main.py
-```
-
-The first run cold-starts the 4-node Indy ledger, which took about 10
-minutes during development. The console prints the progress the whole time.
-Every run after that is much faster (only a few seconds) since the ledger and agent
-containers stay up between runs.
-
-See the main [README](./README.md) for what the startup does step by
-step, how to reset, and further troubleshooting.
+Once inside a Linux environment (native Linux, the terminal opened with
+`vagrant ssh`, or the UTM VM's own terminal), continue with "Starting the
+prototype" in the main [README](./README.md). The commands and the
+startup sequence are the same for each option above.

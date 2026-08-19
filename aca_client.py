@@ -66,23 +66,6 @@ class ACAClient:
         except ACAClientError:
             return False
 
-    def wait_until_ready(self):
-        start = time.time()
-        announced = False
-
-        while time.time() - start < WAIT_SECONDS:
-            if self.is_ready():
-                return
-            if not announced:
-                print(f"Waiting for {self.name} ...")
-                announced = True
-
-            time.sleep(CHECK_INTERVAL)
-
-        raise ACAClientError(
-            f"{self.name} did not become ready within {WAIT_SECONDS} seconds."
-        )
-
     # OOB/DID exchange
     def create_invitation(self, alias):
         return self.post(
@@ -109,9 +92,6 @@ class ACAClient:
                 "auto_accept": "true",
             },
         )
-
-    def connections(self):
-        return self.get("/connections").get("results", [])
 
     def connection(self, connection_id):
         return self.get(f"/connections/{connection_id}")
@@ -144,24 +124,6 @@ class ACAClient:
         except ACAClientError:
             return False
         return connection.get("state") in ("completed", "active")
-
-    def wait_for_connection(self, connection_id):
-        start = time.time()
-
-        while time.time() - start < WAIT_SECONDS:
-            connection = self.connection(connection_id)
-
-            if connection.get("state") == "active":
-                return connection
-
-            if connection.get("state") == "abandoned":
-                raise ACAClientError(f"{self.name}: connection was abandoned.")
-
-            time.sleep(CHECK_INTERVAL)
-
-        raise ACAClientError(
-            f"{self.name}: connection {connection_id} did not become active."
-        )
 
     # Public DID
     def get_public_did(self):
@@ -251,10 +213,6 @@ class ACAClient:
             },
         )
 
-    def credential_exchange(self, exchange_id):
-        result = self.get(f"/issue-credential-2.0/records/{exchange_id}")
-        return result.get("cred_ex_record", result)
-
     def credential_records(self, thread_id=None):
         params = {"thread_id": thread_id} if thread_id else {}
         results = self.get("/issue-credential-2.0/records", params=params).get(
@@ -307,10 +265,6 @@ class ACAClient:
                 },
             },
         )
-
-    def proof_exchange(self, exchange_id):
-        result = self.get(f"/present-proof-2.0/records/{exchange_id}")
-        return result.get("pres_ex_record", result)
 
     def proof_records(self, thread_id=None):
         params = {"thread_id": thread_id} if thread_id else {}

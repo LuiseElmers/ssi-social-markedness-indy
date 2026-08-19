@@ -41,6 +41,7 @@ AGENT_URLS = {
 }
 
 # VON-network
+
 VON_NETWORK_NAME = os.getenv("VON_NETWORK_NAME", "von-network")
 
 LEDGER_REGISTER_URL = os.getenv("LEDGER_REGISTER_URL", "http://localhost:9000/register")
@@ -61,7 +62,7 @@ REQUEST_TIMEOUT = 10
 
 LEDGER_WRITE_TIMEOUT = 120
 
-AGENT_READY_TIMEOUT = 600
+AGENT_READY_TIMEOUT = 1200
 
 COMPOSE_UP_TIMEOUT = 400
 
@@ -93,6 +94,7 @@ MARKED_ATTRIBUTES = {
 
 PREDICATE_ONLY_ATTRIBUTES = {
     "date_of_birth",
+    "is_employed",
 }
 
 
@@ -119,10 +121,10 @@ check_marked_attributes(GOVERNMENT_ID_SCHEMA)
 
 EMPLOYMENT_SCHEMA = {
     "name": "EmploymentCredential",
-    "version": "1.3",
+    "version": "1.4",
     "attributes": [
         "employer_name",
-        "employment_status",
+        "is_employed",
         "monthly_net_income",
         "employed_since",
     ],
@@ -133,7 +135,7 @@ RENTAL_MIN_MONTHLY_NET_INCOME = 2500
 RENTAL_MIN_AGE_YEARS = 18
 
 RENTAL_PROOF_ALLOWED_ATTRIBUTES = {
-    "employment_status",
+    "is_employed",
     "monthly_net_income",
     "date_of_birth",
     "expiry_date",

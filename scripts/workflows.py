@@ -25,15 +25,22 @@ ATTRIBUTE_LABELS = {
     "date_of_birth": "Date of Birth",
     "expiry_date": "Expiry Date",
     "employer_name": "Employer",
-    "employment_status": "Employment Status",
+    "is_employed": "Currently Employed",
     "monthly_net_income": "Monthly Net Income",
     "employed_since": "Employed Since",
 }
 
 PREDICATE_DESCRIPTIONS = {
+    "currently_employed": "Is currently employed",
     "income_at_least_2500": f"Monthly Net Income >= {RENTAL_MIN_MONTHLY_NET_INCOME}",
     "of_legal_age": f"Is of legal age ({RENTAL_MIN_AGE_YEARS}+)",
     "id_not_expired": "Digital ID is still valid",
+}
+
+PREDICATES_WITH_HIDDEN_VALUE = {
+    "income_at_least_2500",
+    "of_legal_age",
+    "id_not_expired",
 }
 
 
@@ -81,6 +88,18 @@ def format_date(value):
     if len(text) == 8 and text.isdigit():
         return f"{text[0:4]}-{text[4:6]}-{text[6:8]}"
     return value
+
+
+def format_value(name, value):
+    """Format one attribute's own value for display to the holder.
+
+    is_employed is stored as 0 or 1 so it can be used as a ZKP predicate,
+    not as cleartext. Shown to the holder, it is still translated back
+    into Yes/No instead of the raw digit.
+    """
+    if name == "is_employed":
+        return "Yes" if str(value) == "1" else "No"
+    return format_date(value)
 
 
 def find_credential_by_cred_def(tenant, cred_def_id):
@@ -149,7 +168,7 @@ def check_wallet():
 
         for name, value in info.get("attrs", {}).items():
             label = ATTRIBUTE_LABELS.get(name, name)
-            print(f"    {label}: {format_date(value)}")
+            print(f"    {label}: {format_value(name, value)}")
 
 
 def issue_employment_credential():
@@ -169,7 +188,7 @@ def issue_employment_credential():
         cred_def_id,
         {
             "employer_name": "Example GmbH",
-            "employment_status": "permanent",
+            "is_employed": "1",
             "monthly_net_income": "3200",
             "employed_since": "2023-01-01",
         },
@@ -205,13 +224,14 @@ def landlord_proof_criteria(employment_cred_def_id, government_cred_def_id):
     employment_restriction = [{"cred_def_id": employment_cred_def_id}]
     government_restriction = [{"cred_def_id": government_cred_def_id}]
 
-    attributes = {
-        "employment_status": {
-            "name": "employment_status",
+    attributes = {}
+    predicates = {
+        "currently_employed": {
+            "name": "is_employed",
+            "p_type": ">=",
+            "p_value": 1,
             "restrictions": employment_restriction,
         },
-    }
-    predicates = {
         "income_at_least_2500": {
             "name": "monthly_net_income",
             "p_type": ">=",
@@ -238,10 +258,13 @@ def landlord_proof_criteria(employment_cred_def_id, government_cred_def_id):
 
 
 def print_request_labels(attributes, predicates):
-    print("\nAttributes that will be revealed to the Landlord:")
-    for attribute in attributes.values():
-        label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
-        print(f"  - {label}")
+    if attributes:
+        print("\nAttributes that will be revealed to the Landlord:")
+        for attribute in attributes.values():
+            label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
+            print(f"  - {label}")
+    else:
+        print("\nNo attributes are revealed to the Landlord.")
 
     print("\nPredicates that will be proven, but not revealed as an exact value:")
     for key, predicate in predicates.items():
@@ -250,14 +273,17 @@ def print_request_labels(attributes, predicates):
 
 
 def print_disclosure_preview(attributes, predicates, attrs, already_sent=False):
-    if already_sent:
-        print("\nRevealed attributes:")
+    if attributes:
+        if already_sent:
+            print("\nRevealed attributes:")
+        else:
+            print("\nAttributes that will be revealed to the Landlord:")
+        for attribute in attributes.values():
+            label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
+            value = format_value(attribute["name"], attrs.get(attribute["name"], "not available"))
+            print(f"  - {label}: {value}")
     else:
-        print("\nAttributes that will be revealed to the Landlord:")
-    for attribute in attributes.values():
-        label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
-        value = format_date(attrs.get(attribute["name"], "not available"))
-        print(f"  - {label}: {value}")
+        print("\nNo attributes are revealed to the Landlord.")
 
     if already_sent:
         print("\nProven predicates:")
@@ -265,8 +291,11 @@ def print_disclosure_preview(attributes, predicates, attrs, already_sent=False):
         print("\nPredicates that will be proven, but not revealed as an exact value:")
     for key, predicate in predicates.items():
         description = PREDICATE_DESCRIPTIONS.get(key, predicate["name"])
-        value = format_date(attrs.get(predicate["name"], "not available"))
-        print(f"  - {description} (your value: {value}, not disclosed)")
+        value = format_value(predicate["name"], attrs.get(predicate["name"], "not available"))
+        if key in PREDICATES_WITH_HIDDEN_VALUE:
+            print(f"  - {description} (your value: {value}, not disclosed)")
+        else:
+            print(f"  - {description} (proven, effectively revealed: {value})")
 
 
 def show_landlord_proof_request():
@@ -294,6 +323,9 @@ def check_proof_eligibility(employment_info, government_info):
         problems.append("No Digital ID credential yet -- request one first.")
 
     if employment_info:
+        is_employed = int(employment_info["attrs"].get("is_employed", 0))
+        if is_employed < 1:
+            problems.append("Not currently employed.")
         income = int(employment_info["attrs"].get("monthly_net_income", 0))
         if income < RENTAL_MIN_MONTHLY_NET_INCOME:
             problems.append(
@@ -375,7 +407,7 @@ def generate_proof():
     )
     tenant_record_id = tenant_request["pres_ex_id"]
 
-    employment = tenant.proof_credentials(tenant_record_id, "employment_status")
+    employment = tenant.proof_credentials(tenant_record_id, "currently_employed")
     income = tenant.proof_credentials(tenant_record_id, "income_at_least_2500")
     legal_age = tenant.proof_credentials(tenant_record_id, "of_legal_age")
     id_valid = tenant.proof_credentials(tenant_record_id, "id_not_expired")
@@ -389,13 +421,9 @@ def generate_proof():
         tenant_record_id,
         {
             "self_attested_attributes": {},
-            "requested_attributes": {
-                "employment_status": {
-                    "cred_id": employment[0]["cred_info"]["referent"],
-                    "revealed": True,
-                },
-            },
+            "requested_attributes": {},
             "requested_predicates": {
+                "currently_employed": {"cred_id": employment[0]["cred_info"]["referent"]},
                 "income_at_least_2500": {"cred_id": income[0]["cred_info"]["referent"]},
                 "of_legal_age": {"cred_id": legal_age[0]["cred_info"]["referent"]},
                 "id_not_expired": {"cred_id": id_valid[0]["cred_info"]["referent"]},

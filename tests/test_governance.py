@@ -39,18 +39,18 @@ def test_out_of_scope_attribute_is_rejected():
 
 
 def test_out_of_scope_predicate_is_rejected():
-    predicates = {"income": {"name": "monthly_net_income_gross"}}
+    predicates = {"monthly_net_income": {"name": "monthly_net_income_gross"}}
     with pytest.raises(ValueError):
         config.check_use_case_scope({}, predicates)
 
 
 def test_in_scope_attribute_and_predicate_are_accepted():
-    attributes = {"employment_status": {"name": "employment_status"}}
+    attributes = {"monthly_net_income": {"name": "monthly_net_income"}}
     predicates = {
-        "income_at_least_2500": {
-            "name": "monthly_net_income",
+        "currently_employed": {
+            "name": "is_employed",
             "p_type": ">=",
-            "p_value": 2500,
+            "p_value": 1,
         }
     }
     config.check_use_case_scope(attributes, predicates)
@@ -66,8 +66,14 @@ def test_marked_attribute_cannot_be_revealed():
     attributes = {"residency_status": {"name": "residency_status"}}
     with pytest.raises(ValueError):
         config.check_disclosure(attributes)
+        
+
+def test_is_employed_cannot_be_revealed():
+    attributes = {"is_employed": {"name": "is_employed"}}
+    with pytest.raises(ValueError):
+        config.check_disclosure(attributes)
 
 
 def test_allowed_attribute_can_be_revealed():
-    attributes = {"employment_status": {"name": "employment_status"}}
+    attributes = {"monthly_net_income": {"name": "monthly_net_income"}}
     config.check_disclosure(attributes)

@@ -87,13 +87,8 @@ def test_proof_can_be_verified():
 def test_disclosed_attrs_stay_minimal():
     skip_if_not_running()
     state = load_state()
-    submission = state.get("rental_proof_submission")
-
-    if submission is None:
-        pytest.skip("No proof has been submitted yet in this session.")
-
-    revealed_names = set()
-    for attribute in submission["attributes"].values():
-        revealed_names.add(attribute["name"])
-
-    assert revealed_names == {"employment_status"}
+   
+    attributes, predicates = workflows.landlord_proof_criteria(
+       state["employment_cred_def_id"], state["government_cred_def_id"]
+    )
+    assert attributes == {}

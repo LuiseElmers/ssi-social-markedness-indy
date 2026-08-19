@@ -25,21 +25,46 @@ UTM, or a ready-made VM), see [LINUX_SETUP.md](./LINUX_SETUP.md).
 
 ## Requirements
 
-Docker, Python 3.10+ and git are needed. This project is tested and
-recommended on Linux:
+Three system tools are needed: Docker, Python 3.10+, and git. This is
+about these three tools only, not about the project's own Python
+packages, those come from `requirements.txt` later, in "Starting the
+prototype" below.
 
-- [Docker Engine + the Compose plugin](https://docs.docker.com/engine/install/)
-- [Python 3.10 or newer](https://www.python.org/downloads/)
-- [git](https://git-scm.com/downloads)
+Two situations, pick the one that corresponds to you:
 
-If you are already on Linux, install the three items above directly, then continue
-with "Starting the prototype" below.
+### Your own machine already runs Linux
 
-If you are not on Linux, see [LINUX_SETUP.md](./LINUX_SETUP.md) for how to set up a
-working Linux environment on Windows or macOS first (Vagrant, UTM, or a
-ready-made VM), then follow the same steps inside it.
+Not a Vagrant or UTM VM, but actual native Linux.
+
+1. Open a terminal. The location does not matter, these are system-wide
+   installs, not tied to a specific project folder.
+2. Install Python and git:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y python3 python3-venv git
+   ```
+3. Install Docker Engine and the Compose plugin, see
+   [docs.docker.com/engine/install](https://docs.docker.com/engine/install/).
+4. Continue with "Starting the prototype" below, from the same terminal.
+
+### Your own machine runs Windows or macOS
+
+1. Follow [LINUX_SETUP.md](./LINUX_SETUP.md) to build a working Linux
+   environment (Vagrant, UTM, or a ready-made VM). That setup installs
+   Docker, Python and git automatically, so nothing needs to be installed manually.
+2. Open a terminal inside that environment: `vagrant ssh` for Vagrant,
+   or the terminal inside the UTM VM. This lands in the VM's own home
+   directory, not the folder on the Windows or macOS host that holds
+   the Vagrantfile, that folder is only needed to build the VM itself.
+3. Continue with "Starting the prototype" below, from that same
+   terminal. It creates its own project folder there with `git clone`.
 
 ## Starting the prototype
+
+Run these commands inside the Linux environment: 
+- on native Linux, that is the regular terminal. 
+- Inside a Vagrant VM, the terminal opened with `vagrant ssh`. 
+- Inside a UTM VM, the terminal inside the running Ubuntu VM.
 
 ```bash
 git clone --recurse-submodules https://github.com/LuiseElmers/ssi-social-markedness-indy.git
@@ -56,14 +81,14 @@ von-network is already running and starts it itself if it is not, so
 there is no separate ledger step to remember or run first.
 
 The first run includes a cold start of the 4-node Indy ledger, which took
-about 10 minutes during development. The console prints the progress the whole time.
+about 10 minutes during development with the emulated VM. The console prints the progress the whole time.
 Every run after that is much faster (only a few seconds) since the ledger and agent
 containers stay up between runs.
 
 If the repository was cloned without `--recurse-submodules`, main.py
 fetches von-network on its own on the first run.
 
-main.py always runs the same sequence:
+main.py always runs the following sequence:
 
 1. Check whether von-network is up, start it if not.
 2. Prepare `.env` and resolve free host ports for the four agents.
@@ -82,17 +107,12 @@ definitions.
 
 ## What the prototype does
 
-The CLI menu covers the full Issuer to Holder to Verifier flow for the
-rental use case. The Government and Employer act as issuers, the Tenant
-is the holder, and the Landlord is the verifier. From the menu, the
-Tenant requests a Digital ID credential from the Government and an
-Employment credential from the Employer, then sends a proof to the
-Landlord. That proof reveals only the employment status in plain text:
-income, age and ID validity are proven through zero-knowledge predicates
-instead of disclosing the actual values (for example, proving the income
-is at least 2500 without revealing the exact number). The Landlord's
-proof request itself can also be inspected from the menu before sending
-anything, to see exactly what would be disclosed.
+The CLI menu covers the full Issuer to Holder to Verifier flow for the rental use case.
+The Government and Employer act as issuers, the Tenant is the holder, and the Landlord 
+is the verifier. From the menu, the Tenant requests a Digital ID credential from the 
+Government and an Employment credential from the Employer, then sends a proof to the Landlord.
+No attribute is revealed to the Landlord in cleartext: current employment, income, age and ID validity are all proven through zero-knowledge predicates instead of disclosing the actual values (for example, proving the income is at least 2500 without revealing the exact number). 
+The Landlord's proof request itself can also be inspected from the menu before sending anything, to see exactly what would be disclosed.
 
 ## Viewing the ledger
 
@@ -105,8 +125,14 @@ http://localhost:9000
 This is von-network's own ledger browser. It shows the schemas and
 credential definitions written during setup, transaction details, and pool
 status. It is separate from the prototype's CLI menu and stays reachable as
-long as the containers run, so it can be opened anytime during or after a
-demo. main.py also prints this URL once the ledger is ready.
+long as the containers run. main.py also prints this URL once the ledger is ready.
+
+How to reach this URL from a browser depends on the environment set up in
+[LINUX_SETUP.md](./LINUX_SETUP.md). Inside a UTM VM on Apple Silicon, open it directly 
+in the browser running inside that VM, this project's UTM setup does not configure any port forwarding to the macOS host. Inside a Vagrant VM, the URL is already reachable 
+directly from the host machine's own browser, due to the port forwarding set up in 
+the Vagrantfile. On native Linux, it opens locally without any extra steps.
+
 
 ## Resetting
 
@@ -146,6 +172,13 @@ not need more than that.
 
 ## Troubleshooting
 
+**If the first run ends with a timeout while waiting for the agents**, nothing
+is broken. On a slow (emulated) host the four agents can need longer than the
+wait window on the very first cold start, while the Indy nodes are still
+settling. The containers stay up and keep starting in the background, so just
+run `python3 main.py` again. The ledger and agents are already up by then, so
+this second start is a warm start and finishes in a few seconds.
+
 If the setup process gets stuck, the best option is to run
 `python3 reset.py`, choose not to delete the ledger when asked, then
 `python3 main.py` again.
@@ -153,8 +186,8 @@ If the setup process gets stuck, the best option is to run
 This keeps the ledger running (unless told otherwise during the reset), so usually 
 another cold start is not necessary.
 
-To check whether the four agents are actually reachable, run the following from the project
-directory:
+To check whether the four agents are actually reachable, run the following 
+from the project directory:
 
 ```bash
 docker compose ps
@@ -170,13 +203,13 @@ curl -s http://localhost:8042/status   # Tenant
 curl -s http://localhost:8052/status   # Landlord
 ```
 
-(ports may be different if the default ports were already occupied, check `.env` for the
-actual values). A working agent answers with JSON containing a `version`
-field. No response or a connection error means that agent is not up yet or
+The ports may be different if the default ports were already occupied, so you 
+can check `.env` for the actual values. A working agent answers with JSON containing 
+a `version` field. No response or a connection error means that agent is not up yet or
 crashed.
 
 **If the ledger stays stuck on "not ready" for a long time**, this is
-most likely the Docker Desktop issue described in the platform notice
+possibly the Docker Desktop issue described in the platform notice
 at the top of this document:
 
 ```bash
@@ -185,7 +218,7 @@ curl -s http://localhost:9000/status
 
 If this repeatedly shows `"init_error": "Error initializing pool ledger"`,
 that is the issue. Switching to Linux (see [LINUX_SETUP.md](./LINUX_SETUP.md))
-is the only reliable fix found so far; von-network's own suggested
+is the only reliable fix found so far. von-network's own suggested
 workaround (`./manage stop` followed by `./manage start` from the
 `von-network/` directory) sometimes helps but did not reliably fix this
 during testing.
