@@ -172,10 +172,11 @@ not need more than that.
 
 ## Troubleshooting
 
-**If the first run ends with a timeout while waiting for the agents**, nothing
-is broken. On a slow (emulated) host the four agents can need longer than the
-wait window on the very first cold start, while the Indy nodes are still
-settling. The containers stay up and keep starting in the background, so just
+### First run ends with a timeout while waiting for the agents 
+
+In that case, nothing is broken. On a slow (emulated) host the four agents can 
+need longer than the wait window on the very first cold start, while the Indy nodes 
+are still settling. The containers stay up and keep starting in the background, so just
 run `python3 main.py` again. The ledger and agents are already up by then, so
 this second start is a warm start and finishes in a few seconds.
 
@@ -208,8 +209,9 @@ can check `.env` for the actual values. A working agent answers with JSON contai
 a `version` field. No response or a connection error means that agent is not up yet or
 crashed.
 
-**If the ledger stays stuck on "not ready" for a long time**, this is
-possibly the Docker Desktop issue described in the platform notice
+### Ledger is stuck or not ready for a long time
+
+This is possibly the Docker Desktop issue described in the platform notice
 at the top of this document:
 
 ```bash
@@ -223,15 +225,12 @@ workaround (`./manage stop` followed by `./manage start` from the
 `von-network/` directory) sometimes helps but did not reliably fix this
 during testing.
 
-**On Apple Silicon**, running inside a Linux VM (see
-[LINUX_SETUP.md](./LINUX_SETUP.md)), the images here are linux/amd64 and
-run emulated, which is the main source of slow starts, separate from the
-Docker Desktop issue above. If things are slow but do eventually finish,
-check the VM's assigned CPU/RAM in its own settings, four emulated Indy
-nodes plus the webserver fighting over too little CPU is a common reason
-the pool never finds consensus.
+On Apple Silicon, running inside a Linux VM (see [LINUX_SETUP.md](./LINUX_SETUP.md)), 
+the images here are linux/amd64 and run emulated, which is the main source of slow 
+starts, separate from the Docker Desktop issue above. If things are slow but do eventually finish, check the VM's assigned CPU/RAM in its own settings, four emulated Indy
+nodes plus the webserver fighting over too little CPU is a common reason the pool never finds consensus.
 
-If containers are stuck in a broken state after a failed attempt:
+### Containers are stuck in a broken state after a failed attempt
 
 ```bash
 docker compose down
