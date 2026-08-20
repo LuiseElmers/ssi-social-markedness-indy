@@ -11,7 +11,7 @@ from scripts.workflows import (
     show_landlord_proof_request,
 )
 
-# Small pause after menu actions so output does not scroll by too fast
+# Small pause after menu actions
 MENU_PAUSE_SECONDS = 0.3
 
 
@@ -32,17 +32,41 @@ def wait_for_return():
         print("Press X to go back.")
 
 
-def submenu_rental_application_process():
+def run_main_menu():
     while True:
-        print("\n" + "-" * 57)
+        print("\n" + "=" * 60)
+        print("          SSI RENTAL APPLICATION PORTAL")
+        print("=" * 60)
+        print(" [1] Check wallet (view received credentials)")
+        print(" [2] Start rental application process")
+        print(" [X] Exit")
+        print("=" * 60)
+        choice = input("Select an option: ").strip().upper()
+        if choice == "1":
+            run_action(check_wallet)
+            wait_for_return()
+        elif choice == "2":
+            time.sleep(MENU_PAUSE_SECONDS)
+            submenu_rental_application()
+        elif choice == "X":
+            print("\nExit")
+            time.sleep(MENU_PAUSE_SECONDS)
+            return
+        else:
+            print("\nInvalid input. Try again.")
+
+
+def submenu_rental_application():
+    while True:
+        print("\n" + "-" * 60)
         print("          RENTAL APPLICATION PROCESS")
-        print("-" * 57)
+        print("-" * 60)
         print(" [1] View landlord's proof request")
         print(" [2] Request employment credential from employer")
         print(" [3] Request digital ID from government agency")
         print(" [4] Send minimal rental proof")
         print(" [X] Back to main menu")
-        print("-" * 57)
+        print("-" * 60)
         choice = input("Select an option: ").strip().upper()
         if choice == "1":
             run_action(show_landlord_proof_request)
@@ -60,28 +84,4 @@ def submenu_rental_application_process():
             time.sleep(MENU_PAUSE_SECONDS)
             return
         else:
-            print("\nInvalid input. Choose one of the available options.")
-
-
-def run_main_menu():
-    while True:
-        print("\n" + "=" * 57)
-        print("          SSI RENTAL APPLICATION PORTAL")
-        print("=" * 57)
-        print(" [1] Check wallet (view received credentials)")
-        print(" [2] Start rental application process")
-        print(" [X] Exit")
-        print("=" * 57)
-        choice = input("Select an option: ").strip().upper()
-        if choice == "1":
-            run_action(check_wallet)
-            wait_for_return()
-        elif choice == "2":
-            time.sleep(MENU_PAUSE_SECONDS)
-            submenu_rental_application_process()
-        elif choice == "X":
-            print("\nExit")
-            time.sleep(MENU_PAUSE_SECONDS)
-            return
-        else:
-            print("\nInvalid input. Choose one of the available options.")
+            print("\nInvalid input. Try again.")

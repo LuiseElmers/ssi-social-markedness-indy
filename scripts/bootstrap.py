@@ -1,4 +1,4 @@
-"""Create the Indy artifacts and DIDComm connections for the prototype."""
+"""Creates the Indy schemas, credential definitions and DIDComm connections."""
 
 import time
 
@@ -17,7 +17,6 @@ from scripts.state_store import load_state, save_state
 
 
 def get_id(response, key):
-    """Read an ID from an ACA-Py response."""
     if response.get(key):
         return response[key]
     if response.get("connection_record", {}).get(key):
@@ -66,7 +65,7 @@ def create_cred_def(client, public_did, schema_id, base_tag):
     attempt = 1
 
     while True:
-        print("Creating credential definition (this can take a moment) ...")
+        print("Creating credential definition, this can take a moment...")
 
         try:
             response = client.create_credential_definition(public_did, schema_id, tag)
@@ -105,7 +104,7 @@ def wait_for_issuer_connection(issuer, invi_msg_id):
             return connection_id
         time.sleep(CHECK_INTERVAL)
 
-    raise ACAClientError("No connection was created from the invitation in time.")
+    raise ACAClientError("Connection could not be created from the invitation in time.")
 
 
 def block_until_connected(client, connection_id):
@@ -120,7 +119,7 @@ def block_until_connected(client, connection_id):
             raise ACAClientError("Connection was abandoned.")
         time.sleep(CHECK_INTERVAL)
 
-    raise ACAClientError("Connection was not completed in time.")
+    raise ACAClientError("Connection could not be completed in time.")
 
 
 def connect(issuer, tenant, name):
@@ -170,7 +169,7 @@ def ensure_connection(state, key, issuer, tenant, alias):
 
 
 def bootstrap():
-    """Create everything that is missing and save its IDs locally."""
+    """Creates everything missing and saves IDs locally."""
     state = load_state()
 
     government = ACAClient("Government", GOVERNMENT_URL)
@@ -178,8 +177,8 @@ def bootstrap():
     tenant = ACAClient("Tenant", TENANT_URL)
     landlord = ACAClient("Landlord", LANDLORD_URL)
 
-    # Cred def creation is CPU-heavy, so running Government and Employer
-    # stays sequential on purpose.
+    # Schemas
+
     government_schema_id = ensure_schema(government, GOVERNMENT_ID_SCHEMA)
     government_cred_def_id = ensure_credential_definition(
         government, government_schema_id, state.get("government_cred_def_id")
@@ -205,6 +204,7 @@ def bootstrap():
     print("Employment credential definition ready.")
 
     # Connections
+
     state["government_tenant"] = ensure_connection(
         state, "government_tenant", government, tenant, "government-tenant"
     )
