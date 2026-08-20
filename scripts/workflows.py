@@ -91,12 +91,6 @@ def format_date(value):
 
 
 def format_value(name, value):
-    """Format one attribute's own value for display to the holder.
-
-    is_employed is stored as 0 or 1 so it can be used as a ZKP predicate,
-    not as cleartext. Shown to the holder, it is still translated back
-    into Yes/No instead of the raw digit.
-    """
     if name == "is_employed":
         return "Yes" if str(value) == "1" else "No"
     return format_date(value)
