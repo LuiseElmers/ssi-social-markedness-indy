@@ -49,7 +49,9 @@ def ensure_schema(client, schema):
 
 def ensure_credential_definition(client, schema_id, cached_id=None, base_tag="default"):
     if cached_id and cached_id in client.created_credential_definitions():
-        return cached_id
+        details = client.fetch_credential_definition(cached_id)
+        if details and details.get("schemaId") == schema_id:
+            return cached_id
     for cred_def_id in client.created_credential_definitions():
         details = client.fetch_credential_definition(cred_def_id)
         if details and details.get("schemaId") == schema_id:
