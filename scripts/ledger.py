@@ -122,7 +122,7 @@ def _wait_for_ledger_ready():
     )
     ledger_ready = False
     attempts = 900  # 30 minutes, 2s for each iteration
-    RESTART_AFTER = 90
+    restart_after = 90
     webserver_restarted = False
 
     for i in range(attempts):
@@ -133,9 +133,9 @@ def _wait_for_ledger_ready():
                 break
         except (requests.RequestException, ValueError):
             pass
-        if i == RESTART_AFTER and not webserver_restarted:
+        if i == restart_after and not webserver_restarted:
             print(
-                f"Still starting after {RESTART_AFTER * 2}s, restarting the ledger webserver once ..."
+                f"Still starting after {restart_after * 2}s, restarting the ledger webserver once ..."
             )
             _restart_webserver()
             webserver_restarted = True
