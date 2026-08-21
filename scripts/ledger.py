@@ -41,7 +41,7 @@ def _ensure_von_network_image():
             sys.exit("Could not build the von-network image.")
 
 
-def _resolve_dockerhost_ipv4():
+""" def _resolve_dockerhost_ipv4():
     try:
         result = subprocess.run(
             [
@@ -62,12 +62,11 @@ def _resolve_dockerhost_ipv4():
     if result.returncode != 0 or not result.stdout.strip():
         return None
 
-    return result.stdout.split()[0]
+    return result.stdout.split()[0] """
 
 
 def _start_von_network():
-    dockerhost_ip = _resolve_dockerhost_ipv4()
-
+    dockerhost_ip = None
     print("Starting von-network (the Indy ledger) ...")
     try:
         manage_command = ["./manage", "start"]
