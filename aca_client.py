@@ -6,11 +6,11 @@ from config import CHECK_INTERVAL, LEDGER_WRITE_TIMEOUT, REQUEST_TIMEOUT, WAIT_S
 
 
 class ACAClientError(Exception):
-    """Raised when ACA-Py cannot complete a request."""
+    """Is raised when ACA-Py cannot complete a request."""
 
 
 class ACATimeoutError(ACAClientError):
-    """Raised when a request runs into a timeout."""
+    """Is raised when a requests lands in a timeout."""
 
 
 class ACAClient:
@@ -55,7 +55,7 @@ class ACAClient:
                 f"{self.name}: ACA-Py returned invalid JSON."
             ) from error
 
-    # Agent status
+    # AGent status
     def status(self):
         return self.get("/status")
 
@@ -312,7 +312,7 @@ class ACAClient:
                     return record
                 if state == "abandoned":
                     raise ACAClientError(
-                        f"{self.name}: protocol exchange was abandoned."
+                        f"{self.name}: protocol exchange was interrupted."
                     )
 
             time.sleep(CHECK_INTERVAL)

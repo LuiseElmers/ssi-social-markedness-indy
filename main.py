@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Single entry point for the SSI prototype."""
+"""Entry point for the SSI prototype."""
 
 
 def main():
     from scripts.ledger import ensure_ledger_up, ledger_is_ready
 
     if ledger_is_ready():
-        print("von-network is already up, skipping the ledger startup ...")
+        print("von-network is already up, skipping the ledger startup...")
     else:
         print(
-            "von-network is not ready yet. Starting the installation ... "
+            "von-network is not ready yet. Starting the installation... "
             "(this can take a while on a cold start)"
         )
         ensure_ledger_up()

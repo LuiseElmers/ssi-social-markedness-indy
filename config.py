@@ -40,7 +40,7 @@ AGENT_URLS = {
     "Landlord": LANDLORD_URL,
 }
 
-# VON-network
+# von-network
 
 VON_NETWORK_NAME = os.getenv("VON_NETWORK_NAME", "von-network")
 
@@ -104,13 +104,13 @@ def check_marked_attributes(schema):
     if marked:
         raise ValueError(
             f"Schema '{schema['name']}' includes marked attributes "
-            f"{sorted(marked)}, which this project's governance rules do not allow."
+            f"{sorted(marked)}, which this prototype's governance rules do not allow."
         )
 
 
 GOVERNMENT_ID_SCHEMA = {
     "name": "GovernmentID",
-    "version": "1.3",
+    "version": "1,3",
     "attributes": [
         "full_name",
         "date_of_birth",
@@ -166,5 +166,5 @@ def check_disclosure(attributes):
     if not_allowed:
         raise ValueError(
             f"Proof request would reveal {sorted(not_allowed)} in cleartext, "
-            "which this project's governance rules do not allow."
+            "which this prototype's governance rules do not allow."
         )
