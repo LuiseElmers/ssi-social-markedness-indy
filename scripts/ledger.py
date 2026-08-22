@@ -1,4 +1,4 @@
-"""Start (or resume) the von-network Indy ledger and check if it is ready."""
+"""Starts or resumes the Indy ledger and checks if it is ready."""
 
 import subprocess
 import sys
@@ -15,7 +15,7 @@ GENESIS_FILE = PROJECT_DIR / "genesis.txn"
 
 def _ensure_von_network_submodule():
     if not (VON_NETWORK_DIR / "manage").exists():
-        print("Fetching von-network (only on first run) ...")
+        print("Fetching von-network (only on first run)...")
         try:
             subprocess.run(
                 ["git", "submodule", "update", "--init", "--recursive"],
@@ -33,15 +33,15 @@ def _ensure_von_network_image():
 
     if not image_check.stdout.strip():
         print(
-            "Building the von-network image (only on first run, this can take a while) ..."
+            "Building the von-network image (only on the first run, this can take a while)..."
         )
         try:
             subprocess.run(["./manage", "build"], cwd=VON_NETWORK_DIR, check=True)
         except subprocess.CalledProcessError:
-            sys.exit("Could not build the von-network image.")
+            sys.exit("The von-network image could not be built.")
 
 
-""" def _resolve_dockerhost_ipv4():
+"""def _resolve_dockerhost_ipv4():
     try:
         result = subprocess.run(
             [
@@ -61,18 +61,18 @@ def _ensure_von_network_image():
         return None
     if result.returncode != 0 or not result.stdout.strip():
         return None
-
-    return result.stdout.split()[0] """
+    
+    return result.stdout.split()[0]"""
 
 
 def _start_von_network():
     dockerhost_ip = None
-    print("Starting von-network (the Indy ledger) ...")
+    print("Starting the von-network (the Indy ledger)...")
     try:
         manage_command = ["./manage", "start"]
         if dockerhost_ip:
             print(
-                f"Using {dockerhost_ip} (resolved from host.docker.internal) as the node address ..."
+                f"Using {dockerhost_ip} (resolved from host.docker.internal) as the node address..."
             )
             manage_command.append(dockerhost_ip)
         subprocess.run(manage_command, cwd=VON_NETWORK_DIR, check=True)
@@ -116,9 +116,7 @@ def _restart_webserver():
 
 
 def _wait_for_ledger_ready():
-    print(
-        "Waiting for the von-network ledger to answer ..."
-    )
+    print("Waiting for the von-network to answer...")
     ledger_ready = False
     attempts = 900  # 30 minutes, 2s for each iteration
     restart_after = 90
@@ -134,12 +132,12 @@ def _wait_for_ledger_ready():
             pass
         if i == restart_after and not webserver_restarted:
             print(
-                f"Still starting after {restart_after * 2}s, restarting the ledger webserver once ..."
+                f"Still starting after {restart_after * 2}s, restarting the ledger webserver once..."
             )
             _restart_webserver()
             webserver_restarted = True
         if i > 0 and i % 30 == 0:
-            print(f"Still waiting ({i * 2} seconds so far) ...")
+            print(f"Still waiting ({i * 2} seconds so far)...")
         time.sleep(2)
     if not ledger_ready:
         sys.exit("The ledger did not answer in time.")
@@ -148,7 +146,7 @@ def _wait_for_ledger_ready():
 
 
 def _check_browser_page(webserver_already_restarted):
-    print("Checking that the ledger browser page is reachable ...")
+    print("Checking that the ledger browser page is reachable...")
     browser_page_ok = False
 
     for attempt in range(5):
@@ -162,12 +160,12 @@ def _check_browser_page(webserver_already_restarted):
         time.sleep(3)
 
     if not browser_page_ok and not webserver_already_restarted:
-        print("Browser page not responding yet, restarting the webserver ...")
+        print("Browser page is not responding yet, restarting webserver...")
         if _restart_webserver():
             time.sleep(10)
             for attempt in range(5):
                 try:
-                    response = requests.get("http://localhost:9000/", timeout=5)
+                    response = requests.get("http://localost:9000/", timeout=5)
                     if response.ok:
                         browser_page_ok = True
                         break
@@ -182,7 +180,7 @@ def _check_browser_page(webserver_already_restarted):
 
 
 def _fetch_genesis():
-    print("Fetching the current genesis transactions ...")
+    print("Fetching the current genesis transactions...")
     response = requests.get("http://localhost:9000/genesis", timeout=10)
     response.raise_for_status()
     GENESIS_FILE.write_text(response.text)
@@ -202,7 +200,7 @@ def _save_von_network_name():
             von_network_name = name
             break
     if von_network_name is None:
-        sys.exit("Could not find the von-network Docker network.")
+        sys.exit("The von-network Docker network could not be found.")
 
     set_key(str(ENV_FILE), "VON_NETWORK_NAME", von_network_name)
     return von_network_name
@@ -245,7 +243,7 @@ def ensure_ledger_up():
     print("\nvon-network is up and ready.")
 
     own_ip = _get_own_ip()
-    print("\nThe ledger browser page can be reached at http://localhost:9000")
+    print("\nThe ledger browser can be reached at http://localhost:9000")
 
     if own_ip and own_ip != "127.0.0.1":
-        print(f"(or, from another device on this network, at http://{own_ip}:9000)")
+        print(f"(or from another devide on this network, at http://{own_ip}:9000)")

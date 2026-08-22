@@ -1,4 +1,4 @@
-"""Checks shared by ledger.py and environment.py."""
+"""Checks that are shared by ledger.py and environment.py."""
 
 import shutil
 import subprocess
@@ -13,16 +13,15 @@ ENV_EXAMPLE_FILE = PROJECT_DIR / ".env.example"
 def check_docker():
     if shutil.which("docker") is None:
         sys.exit("Docker is not installed or not on PATH.")
-
+        
     result = subprocess.run(["docker", "compose", "version"], capture_output=True)
     if result.returncode != 0:
         sys.exit("Docker Compose v2 is required.")
-
-
+        
+        
 def ensure_env_file():
-    """Create .env from .env.example if .env does not exist yet."""
     if not ENV_FILE.exists():
         if not ENV_EXAMPLE_FILE.exists():
             sys.exit(f"{ENV_EXAMPLE_FILE} is missing.")
-        print("No .env found, creating one from .env.example ...")
+        print("No .env could be found, creating one from .env.example...")
         shutil.copy(ENV_EXAMPLE_FILE, ENV_FILE)

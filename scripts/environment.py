@@ -1,4 +1,4 @@
-"""Prepare .env and resolve host ports for the SSI prototype's agents."""
+"""Prepares .env an resolves host ports for the ACA-Py agents."""
 
 import socket
 import subprocess
@@ -56,14 +56,14 @@ def find_free_port(preferred):
     sys.exit(f"Could not find a free port near {preferred}.")
 
 
-def _fill_missing_values():
+def _filling_missing_values():
     example_values = dotenv_values(ENV_EXAMPLE_FILE)
     current_values = dotenv_values(ENV_FILE)
     lines_to_add = []
 
     for key, value in example_values.items():
         if not current_values.get(key):
-            print(f"Adding missing {key} to .env ...")
+            print(f"Adding missing {key} to .env...")
             lines_to_add.append(f"{key}={value}")
     if lines_to_add:
         with open(ENV_FILE, "a") as env_file:
@@ -77,7 +77,7 @@ def _fill_missing_values():
 
     if still_missing:
         sys.exit(
-            "These values are still missing from .env after trying to "
+            "The following values are still missing from .env after trying to "
             f"fill them in: {', '.join(still_missing)}. Please open "
             ".env and check these lines directly."
         )
@@ -97,13 +97,13 @@ def _resolve_ports():
             all_running = False
 
     if all_running:
-        print("ACA-Py containers are already running, keeping their current ports ...")
+        print("ACA-Py containers are already running, keeping their current ports...")
     else:
         for key, default_port in AGENT_PORT_DEFAULTS.items():
             resolved_port = find_free_port(default_port)
             if resolved_port != default_port:
                 print(
-                    f"Port {default_port} is busy, using {resolved_port} for {key} instead ..."
+                    f"Port {default_port} is busy, using {resolved_port} for {key} instead..."
                 )
             set_key(str(ENV_FILE), key, str(resolved_port))
 
@@ -111,5 +111,5 @@ def _resolve_ports():
 def prepare_environment():
     check_docker()
     ensure_env_file()
-    _fill_missing_values()
+    _filling_missing_values()
     _resolve_ports()
