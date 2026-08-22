@@ -1,4 +1,4 @@
-"""Minimal persistence for IDs."""
+"""Creates minimal persistence for IDs."""
 
 import json
 
