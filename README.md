@@ -30,7 +30,7 @@ There are two situations, pick the one that matches:
    sudo apt-get update
    sudo apt-get install -y python3 python3-venv git
 ```
-3. Install Docker Engine and the Compose plugin, see [docs.docker.com/engine/install](https://docks.docker.com/engine/install/).
+3. Install Docker Engine and the Compose plugin, see [docs.docker.com/engine/install](https://docs.docker.com/engine/install/).
 4. Continue with "Starting the prototype" below, from the same terminal.
 
 ### Running Windows or macOS
@@ -58,7 +58,7 @@ python3 main.py
 
 The whole start procedure is done via one command. main.py checks whether von-network is already running and starts it itself if it is not, so there is no separate ledger step to run first.
 
-The first run includes a cold start of the ledger, which took about 10 minutes during development inside the emulated VM. The console prints the progress the whole time. Every run after that is much faster (only about a few seconds) as ling as the ledger and agent containers are still running from the previous run. If the containers were stopped, for example after shutting down the VM overnight, see "Resuming after a break" below.
+The first run includes a cold start of the ledger, which took about 10 minutes during development inside the emulated VM. The console prints the progress the whole time. Every run after that is much faster (only about a few seconds) as long as the ledger and agent containers are still running from the previous run. If the containers were stopped, for example after shutting down the VM overnight, see "Resuming after a break" below.
 
 If the repository was cloned without `--recurse-submodules`, main.py fetches von-network on its own on the first run.
 
@@ -89,11 +89,15 @@ http://localhost:9000
 
 This is the von-network's own ledger browser. It shows the schemas and credential definitions written during the setup as well as transaction details, and pool status. It is separate from the prototype's CLI menu and stays reachable as long as the containers run. main.py also prints this URL once the ledger is ready.
 
-How to reach this URL from a browser depends on the environment set up in [LINUX_SETUP.md](./LINUX_SETUP.md). Inside a UTM VM on Apple Silicon, open it directly in the browser running inside that VM. This prototype's UTM setup does not condigure any port forwarding to the macOS host. Inside a Vagrant VM, the URL is already reachable directly from the host machine's own browser, due to the port forwarding set up in the Vagrantfile. On native Linux, it opens locally without any extra steps.
+How to reach this URL from a browser depends on the environment set up in [LINUX_SETUP.md](./LINUX_SETUP.md). 
+
+Inside a UTM VM on Apple Silicon, no graphical desktop is installed, so there is no browser inside the VM itself. Once the ledger is running (after "Running the prototype"), main.py prints the VM's own network address. Open that address directly in a browser on the macOS host to access the ledger browser.
+
+Inside a Vagrant VM, the URL is already reachable directly from the host machine's own browser, due to the port forwarding set up in the Vagrantfile. On native Linux, it opens locally without any extra steps.
 
 ## Resuming after a break
 
-To continue after having already set the prototyp up once:
+To continue after having already set the prototype up once:
 
 ### On native Linux
 
@@ -173,7 +177,7 @@ curl -s http://localhost:8052/status # Landlord
 
 The same URLs also work in a browser, but where depends on the environment:
 - following the Vagrant setup, they also work directly in a browser on the Windows or Intel/AMD macOS host, since those ports are forwarded there by default, alongside port 9000. 
-- Inside a UTM VM on Apple Silicon, they only work from inside the VM itself, this project's UTM setup does not forward any ports to the macOS host (see "Viewing the ledger" above for the same distinction with the ledger browser).
+- Inside a UTM VM on Apple Silicon, there is no browser inside the VM itself. Use the VM's own network address from a browser on the macOS host instead (see "Viewing the ledger" above for the same distinction with the ledger browser).
 
 The ports may be different if the default ports were already occupied, so check `.env` for the actual values. A working agent answers with JSON containing a `version`field. No response or a connection error means that agent is not up yet or has crashed.
 

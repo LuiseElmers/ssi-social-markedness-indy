@@ -164,21 +164,42 @@ Apple Silicon).
 
 **2. Download Ubuntu**
 
-[ubuntu.com/download/desktop](https://ubuntu.com/download/desktop), the regular x86_64 ISO (not the ARM64 one,
-even though the Mac itself is Apple Silicon). The is equal to the tested setup and the linux/amd64 Docker images that were used.
+[releases.ubuntu.com/jammy](https://releases.ubuntu.com/jammy), Ubuntu 22.04. LTS
+This matches the Ubuntu version that is used in the Vagrant setup. Download the "64-bit PC (AMD64) server install image" (not the ARM64 one, even though the Mac itself is Apple Silicon). The is equal to the tested setup and the linux/amd64 Docker images that were used.
 
 **3. Create the VM in UTM**
 
 1. Open UTM, click "Create a New Virtual Machine".
 2. Choose **Virtualize** only if the guest and host architecture (own machine) match. Since the guest here is x86_64 and the Mac is Apple Silicon (arm64), choose **Emulate** instead.
-3. Choose "Linux" as OS and then browse the downloaded Ubuntu ISO.
-4. Assign at least 9 GB RAM and 5 CPU cores.
+3. Choose "Linux" as OS.
+4. Assign at least 9 GB RAM (9216 MiB) and 5 CPU cores.
 5. Assign at least 60GB of disk space, as the Docker images and ledger data take up a lot of it.
-6. Finish the VM setup and start the VM.
+6. Browse the downloaded Ubuntu ISO.
+7. Finish the VM setup with the default settings and start the VM.
 
 **4. Install Ubuntu**
 
-Follow the on-screen Ubuntu installer (choose the standard options), create a user account and restart when prompted.
+Follow the on-screen Ubuntu installer (choose the standard options), create a user account and restart when prompted. The server install image has no graphical interface, so after the restart, the VM is used through the text-based terminal inside UTM.
+
+**Optional: connect via SSH from the Mac terminal**
+
+This makes it easier to copy and execute commands for the VM from inside a Mac Terminal.
+1. Install SSH:
+```bash
+sudo apt-get update
+sudo apt-get install -y openssh-server
+```
+2. Find the VM's IP address from inside the UTM's terminal:
+```bash
+ip a
+```
+3. On the macOS, open a terminal session and connect:
+```bash
+ssh <username>@<vm-ip>
+```
+- Replace `<username>`with the account created during the VM installation. If unsure, type `whoami`into the UTM terminal to find out the account name.
+- `<vm-ip>` is the IP address from step 2.
+- From here on, all following commands (like Docker installation, "Running the prototype") can be run from this Mac terminal window instead of UTM's terminal.
 
 **5. Install Docker, git and Python inside the VM**
 
