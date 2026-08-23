@@ -57,16 +57,10 @@ This folder is created on the host OS and not inside the VM.
 ```ruby
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
-
-  config.vm.network "forwarded_port", guest: 9000, host: 9000
-  config.vm.network "forwarded_port", guest: 8021, host: 8021
-  config.vm.network "forwarded_port", guest: 8022, host: 8022
-  config.vm.network "forwarded_port", guest: 8031, host: 8031
-  config.vm.network "forwarded_port", guest: 8032, host: 8032
-  config.vm.network "forwarded_port", guest: 8041, host: 8041
-  config.vm.network "forwarded_port", guest: 8042, host: 8042
-  config.vm.network "forwarded_port", guest: 8051, host: 8051
-  config.vm.network "forwarded_port", guest: 8052, host: 8052
+  config.vm.network "forwarded_port", guest: 9000, host: 9000, host_ip: "127.0.0.1"
+  (8021..8152).each do |port|
+    config.vm.network "forwarded_port", guest: port, host: port, host_ip: "127.0.0.1"
+  end
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "9216"
@@ -131,22 +125,18 @@ vagrant destroy # Deletes the VM
 
 These commands run on the host, from the folder with the Vagrantfile, not inside the VM. To make sure that `vagrant halt` worked, check with `vagrant status`, which should show "poweroff".
 
-### Troubleshooting: wrong forwarded port
+### Troubleshooting: agent port unreachable
 
 If the browser or host machine shows a connection error for one or more of the agent ports while
-the ledger at `http://localhost:9000`is reachable, the running prototype has chosen a different port
-than the default one (see `scripts/environment.py`), this only happens if the default port was already
-busy at that moment.
-
-To find out and fix it:
+the ledger at `http://localhost:9000`is reachable, first check which port the running prototype actually chose:
 
 1. Inside the VM, check the ports:
 ```bash
 grep ADMIN_PORT .env
 ```
-2. On the host machine, edit the Vagrantfile:
-   - change the `host:`value on the matching `forwarded_port`line above to the port found in step 1.
-3. From the folder with the Vagrantfile, on the host, type in a terminal:
+2. Confirm that the port is within 8021-8152, which is the range forwarded by the Vagrantfile.
+   
+If the port is outside this range, widen the range in the Vagrantfile accordingly and reload. From the folder with the Vagrantfile, on the host, type in a terminal:
 ```bash
 vagrant reload
 ```
@@ -155,8 +145,7 @@ installed inside it.
 
 ## Option B: UTM (Apple Silicon Mac)
 
-This is the setup this prototype was developed and tested in (an x86_64 Ubuntu VM, emulated, under UTM on
-Apple Silicon).
+This is the setup this prototype was developed and tested in (an x86_64 Ubuntu VM, emulated, under UTM on Apple Silicon).
 
 **1. Install UTM**
 
