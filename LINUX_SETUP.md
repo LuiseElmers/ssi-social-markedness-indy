@@ -170,6 +170,17 @@ This matches the Ubuntu version that is used in the Vagrant setup. Download the 
 
 Follow the on-screen Ubuntu installer (choose the standard options), create a user account and restart when prompted. The server install image has no graphical interface, so after the restart, the VM is used through the text-based terminal inside UTM.
 
+### Troubleshooting: installation hangs
+
+As this is an emulated VM, the setup of the VM can take a long time, especially during the "unattended-upgrades" part. If that part takes longer than 15-20 minutes, take the following steps:
+
+1. Stop the VM via the UTM button, then restart it again. 
+2. If this does not work, recreate a new VM according to the steps above and during the Ubuntu installer skip or decline any option to install security updates automatically during setup.
+3. Once the VM is ready, install the updates manually:
+```bash
+sudo apt-get update && sudo apt-get upgrade -y
+```
+
 **Optional: connect via SSH from the Mac terminal**
 
 This makes it easier to copy and execute commands for the VM from inside a Mac Terminal.
@@ -178,11 +189,11 @@ This makes it easier to copy and execute commands for the VM from inside a Mac T
 sudo apt-get update
 sudo apt-get install -y openssh-server
 ```
-2. Find the VM's IP address from inside the UTM's terminal:
+1. Find the VM's IP address from inside the UTM's terminal:
 ```bash
 ip a
 ```
-3. On the macOS, open a terminal session and connect:
+1. On the macOS, open a terminal session and connect:
 ```bash
 ssh <username>@<vm-ip>
 ```
