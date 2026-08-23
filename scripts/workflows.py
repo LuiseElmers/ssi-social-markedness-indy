@@ -1,4 +1,4 @@
-"""SSI workflows used by the console menu."""
+"""Contains SSI workflows used by the console menu."""
 
 from datetime import date
 
@@ -142,9 +142,9 @@ def check_wallet():
     tenant = ACAClient("Tenant", TENANT_URL)
     credentials = tenant.wallet_credentials()
 
-    print("\n" + "=" * 57)
+    print("\n" + "=" * 60)
     print("                     TENANT WALLET")
-    print("=" * 57)
+    print("=" * 60)
 
     if not credentials:
         print("\nWallet is currently empty.")
@@ -162,7 +162,7 @@ def check_wallet():
 
         for name, value in info.get("attrs", {}).items():
             label = ATTRIBUTE_LABELS.get(name, name)
-            print(f"    {label}: {format_value(name, value)}")
+            print(f"     {label}: {format_value(name, value)}")
 
 
 def issue_employment_credential():
@@ -274,8 +274,11 @@ def print_disclosure_preview(attributes, predicates, attrs, already_sent=False):
             print("\nAttributes that will be revealed to the Landlord:")
         for attribute in attributes.values():
             label = ATTRIBUTE_LABELS.get(attribute["name"], attribute["name"])
-            value = format_value(attribute["name"], attrs.get(attribute["name"], "not available"))
+            value = format_value(
+                attribute["name"], attrs.get(attribute["name"], "not available")
+            )
             print(f"  - {label}: {value}")
+
     else:
         print("\nNo attributes are revealed to the Landlord.")
 
@@ -285,11 +288,13 @@ def print_disclosure_preview(attributes, predicates, attrs, already_sent=False):
         print("\nPredicates that will be proven, but not revealed as an exact value:")
     for key, predicate in predicates.items():
         description = PREDICATE_DESCRIPTIONS.get(key, predicate["name"])
-        value = format_value(predicate["name"], attrs.get(predicate["name"], "not available"))
+        value = format_value(
+            predicate["name"], attrs.get(predicate["name"], "not available")
+        )
         if key in PREDICATES_WITH_HIDDEN_VALUE:
             print(f"  - {description} (your value: {value}, not disclosed)")
         else:
-            print(f"  - {description} (proven, effectively revealed: {value})")
+            print(f" - {description} (proven, effectively revealed: {value})")
 
 
 def show_landlord_proof_request():
@@ -312,9 +317,9 @@ def check_proof_eligibility(employment_info, government_info):
     problems = []
 
     if not employment_info:
-        problems.append("No Employment credential yet -- request one first.")
+        problems.append("No Employment credential yet. Request one first.")
     if not government_info:
-        problems.append("No Digital ID credential yet -- request one first.")
+        problems.append("No Digital ID credential yet. Request one first.")
 
     if employment_info:
         is_employed = int(employment_info["attrs"].get("is_employed", 0))
@@ -323,7 +328,7 @@ def check_proof_eligibility(employment_info, government_info):
         income = int(employment_info["attrs"].get("monthly_net_income", 0))
         if income < RENTAL_MIN_MONTHLY_NET_INCOME:
             problems.append(
-                f"Monthly net income is {income}, below the required "
+                f"Monthly net income is {income}, which is below the required "
                 f"{RENTAL_MIN_MONTHLY_NET_INCOME}."
             )
 
@@ -340,7 +345,9 @@ def check_proof_eligibility(employment_info, government_info):
 
 def landlord_decision(verified):
     if verified:
-        message = "Application accepted. All required criteria were proven and verified."
+        message = (
+            "Application accepted. All required criteria were proven and verified."
+        )
     else:
         message = "Application not accepted. The proof could not be verified against the required criteria."
 
@@ -417,7 +424,9 @@ def generate_proof():
             "self_attested_attributes": {},
             "requested_attributes": {},
             "requested_predicates": {
-                "currently_employed": {"cred_id": employment[0]["cred_info"]["referent"]},
+                "currently_employed": {
+                    "cred_id": employment[0]["cred_info"]["referent"]
+                },
                 "income_at_least_2500": {"cred_id": income[0]["cred_info"]["referent"]},
                 "of_legal_age": {"cred_id": legal_age[0]["cred_info"]["referent"]},
                 "id_not_expired": {"cred_id": id_valid[0]["cred_info"]["referent"]},

@@ -1,4 +1,4 @@
-"""Start the ACA-Py containers and initialize the SSI infrastructure."""
+"""Starts the ACA-Py containers and initializes the SSI infrastructure."""
 
 import subprocess
 import threading
@@ -37,7 +37,7 @@ def check_von_network():
 
 
 def start_containers():
-    print("Starting ACA-Py containers ...")
+    print("Starting ACA-Py containers...")
 
     try:
         subprocess.run(
@@ -58,7 +58,7 @@ def check_agent(agent, name, ready):
 
 
 def wait_for_all_agents():
-    print("Waiting for ACA-Py agents (this can take a while on first start) ...")
+    print("Waiting for ACA-Py agents. This can take a while on the first run...")
 
     start = time.time()
     announced = set()
@@ -81,7 +81,7 @@ def wait_for_all_agents():
                 continue
             all_ready = False
             if name not in announced:
-                print(f"Waiting for {name} ...")
+                print(f"Waiting for {name}...")
                 announced.add(name)
         if all_ready:
             print("All ACA-Py agents are ready.")
