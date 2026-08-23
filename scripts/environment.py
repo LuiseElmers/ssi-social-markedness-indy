@@ -6,19 +6,13 @@ import sys
 
 from dotenv import dotenv_values, set_key
 from scripts.common import (
+    AGENT_SERVICES,
     ENV_FILE,
     ENV_EXAMPLE_FILE,
     PROJECT_DIR,
     check_docker,
     ensure_env_file,
 )
-
-AGENT_SERVICES = [
-    "issuer_government",
-    "issuer_employer",
-    "holder_tenant",
-    "verifier_landlord",
-]
 
 AGENT_PORT_DEFAULTS = {
     "GOVERNMENT_HTTP_PORT": 8031,
@@ -56,7 +50,7 @@ def find_free_port(preferred):
     sys.exit(f"Could not find a free port near {preferred}.")
 
 
-def _filling_missing_values():
+def _fill_missing_values():
     example_values = dotenv_values(ENV_EXAMPLE_FILE)
     current_values = dotenv_values(ENV_FILE)
     lines_to_add = []
@@ -111,5 +105,5 @@ def _resolve_ports():
 def prepare_environment():
     check_docker()
     ensure_env_file()
-    _filling_missing_values()
+    _fill_missing_values()
     _resolve_ports()

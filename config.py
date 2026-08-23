@@ -42,19 +42,19 @@ AGENT_URLS = {
 
 # von-network
 
-VON_NETWORK_NAME = os.getenv("VON_NETWORK_NAME", "von-network")
+VON_NETWORK_NAME = get_env("VON_NETWORK_NAME", "von-network")
 
-LEDGER_REGISTER_URL = os.getenv("LEDGER_REGISTER_URL", "http://localhost:9000/register")
+LEDGER_REGISTER_URL = get_env("LEDGER_REGISTER_URL", "http://localhost:9000/register")
 
 # Agent seeds
 
-GOVERNMENT_SEED = os.getenv("GOVERNMENT_SEED", "gov_agent_seed_32_characters_01!")
+GOVERNMENT_SEED = get_env("GOVERNMENT_SEED", "gov_agent_seed_32_characters_01!")
 
-EMPLOYER_SEED = os.getenv("EMPLOYER_SEED", "emp_agent_seed_32_characters_02!")
+EMPLOYER_SEED = get_env("EMPLOYER_SEED", "emp_agent_seed_32_characters_02!")
 
-TENANT_SEED = os.getenv("TENANT_SEED", "tenant_agent_seed_32_characters0")
+TENANT_SEED = get_env("TENANT_SEED", "tenant_agent_seed_32_characters0")
 
-LANDLORD_SEED = os.getenv("LANDLORD_SEED", "landlord_agent_seed_32_chars0040")
+LANDLORD_SEED = get_env("LANDLORD_SEED", "landlord_agent_seed_32_chars0040")
 
 # Runtime settings
 
@@ -110,7 +110,7 @@ def check_marked_attributes(schema):
 
 GOVERNMENT_ID_SCHEMA = {
     "name": "GovernmentID",
-    "version": "1,3",
+    "version": "1.3",
     "attributes": [
         "full_name",
         "date_of_birth",

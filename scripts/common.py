@@ -1,4 +1,4 @@
-"""Checks that are shared by ledger.py and environment.py."""
+"""Includes checks and constants that are shared across .py files."""
 
 import shutil
 import subprocess
@@ -8,6 +8,13 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_DIR / ".env"
 ENV_EXAMPLE_FILE = PROJECT_DIR / ".env.example"
+
+AGENT_SERVICES = [
+    "issuer_government",
+    "issuer_employer",
+    "holder_tenant",
+    "verifier_landlord",
+]
 
 
 def check_docker():

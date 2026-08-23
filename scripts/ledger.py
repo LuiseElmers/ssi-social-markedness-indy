@@ -165,7 +165,7 @@ def _check_browser_page(webserver_already_restarted):
             time.sleep(10)
             for attempt in range(5):
                 try:
-                    response = requests.get("http://localost:9000/", timeout=5)
+                    response = requests.get("http://localhost:9000/", timeout=5)
                     if response.ok:
                         browser_page_ok = True
                         break

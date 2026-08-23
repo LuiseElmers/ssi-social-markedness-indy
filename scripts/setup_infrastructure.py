@@ -14,13 +14,7 @@ from config import (
 )
 from scripts.register_seeds import register_issuer_seeds
 from scripts.bootstrap import bootstrap
-
-SERVICES = [
-    "issuer_government",
-    "issuer_employer",
-    "holder_tenant",
-    "verifier_landlord",
-]
+from scripts.common import AGENT_SERVICES
 
 
 def check_von_network():
@@ -41,7 +35,7 @@ def start_containers():
 
     try:
         subprocess.run(
-            ["docker", "compose", "up", "-d", *SERVICES],
+            ["docker", "compose", "up", "-d", *AGENT_SERVICES],
             check=True,
             timeout=COMPOSE_UP_TIMEOUT,
         )
