@@ -161,7 +161,7 @@ This matches the Ubuntu version that is used in the Vagrant setup. Download the 
 1. Open UTM, click "Create a New Virtual Machine".
 2. Choose **Virtualize** only if the guest and host architecture (own machine) match. Since the guest here is x86_64 and the Mac is Apple Silicon (arm64), choose **Emulate** instead.
 3. Choose "Linux" as OS.
-4. Assign at least 9 GB RAM (9216 MiB) and 5 CPU cores.
+4. Assign at least 8 GB RAM and 4 CPU cores.
 5. Assign at least 60GB of disk space, as the Docker images and ledger data take up a lot of it.
 6. Browse the downloaded Ubuntu ISO.
 7. Finish the VM setup with the default settings and start the VM.
