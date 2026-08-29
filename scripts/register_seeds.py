@@ -39,7 +39,7 @@ def register_seed(name, seed):
 # Only issuers need a ledger write role
 # Tenant and Landlord use DIDComm peer DIDs
 def register_issuer_seeds():
-    print("Registering issuer DIDs on von-network...")
+    print("Registering issuer DIDs on VON Network...")
     register_seed("Government", GOVERNMENT_SEED)
     register_seed("Employer", EMPLOYER_SEED)
 
