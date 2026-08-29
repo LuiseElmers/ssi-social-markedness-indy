@@ -113,18 +113,6 @@ From here on, this is a normal Linux terminal.
 
 **8. Continue with "Running the prototype" below, inside the terminal.**
 
-### Stopping/resuming later
-
-If still logged into the VM (from `vagrant ssh`), type `exit` first to get back to the host's own terminal.
-
-```bash
-vagrant halt # Stopps the VM and keeps everything as it is
-vagrant up # Starts the VM again
-vagrant destroy # Deletes the VM
-```
-
-These commands run on the host, from the folder with the Vagrantfile, not inside the VM. To make sure that `vagrant halt` worked, check with `vagrant status`, which should show "poweroff".
-
 ### Troubleshooting: agent port unreachable
 
 If the browser or host machine shows a connection error for one or more of the agent ports while

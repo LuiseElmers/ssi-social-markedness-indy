@@ -76,6 +76,18 @@ The IDs created during setup are stored in `runtime/state.json`, so a second sta
 
 The Tenant and Landlord agents do not need a ledger write role, they use DIDComm peer DIDs. Only the Government and Employer agents write schemas and credential definitions.
 
+## Stopping/resuming later
+
+If still logged into the VM (from `vagrant ssh`), type `exit` first to get back to the host's own terminal.
+
+```bash
+vagrant halt # Stopps the VM and keeps everything as it is
+vagrant up # Starts the VM again
+vagrant destroy # Deletes the VM
+```
+
+These commands run on the host, from the folder with the Vagrantfile, not inside the VM. To make sure that `vagrant halt` worked, check with `vagrant status`, which should show "poweroff".
+
 ## What the prototype does
 The CLI menu covers the full Issuer to Holder to Verifier flow for the rental application use case. The Government and Employer act as issuers, the Tenant is the holder, and the Landlord is the verifier. From the menu, the Tenant requests a Digital ID credential from the Government and an Employment credential from the Employer, then sends a proof to the Landlord. No attribute is revealed to the Landlord in plain text. The attributes current employment, income, age and ID validity are all proven through ZKP predicates instead of disclosing the actual values (for example, it is proven that the income is at least 2500 without revealing the exact number). The Landlord's proof request itself can also be inspected from the menu before sending anything, to see exactly what would be disclosed.
 

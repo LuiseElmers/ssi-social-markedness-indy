@@ -292,7 +292,7 @@ def print_disclosure_preview(attributes, predicates, attrs, already_sent=False):
             predicate["name"], attrs.get(predicate["name"], "not available")
         )
         if key in PREDICATES_WITH_HIDDEN_VALUE:
-            print(f"  - {description} (your value: {value}, not disclosed)")
+            print(f" - {description} (your value: {value}, not disclosed)")
         else:
             print(f" - {description} (proven, effectively revealed: {value})")
 

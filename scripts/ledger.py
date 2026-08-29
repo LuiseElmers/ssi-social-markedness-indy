@@ -15,7 +15,7 @@ GENESIS_FILE = PROJECT_DIR / "genesis.txn"
 
 def _ensure_von_network_submodule():
     if not (VON_NETWORK_DIR / "manage").exists():
-        print("Fetching von-network (only on first run)...")
+        print("Fetching VON Network (only on first run)...")
         try:
             subprocess.run(
                 ["git", "submodule", "update", "--init", "--recursive"],
@@ -23,7 +23,7 @@ def _ensure_von_network_submodule():
                 check=True,
             )
         except subprocess.CalledProcessError:
-            sys.exit("Could not fetch von-network.")
+            sys.exit("Could not fetch VON Network.")
 
 
 def _ensure_von_network_image():
@@ -33,64 +33,20 @@ def _ensure_von_network_image():
 
     if not image_check.stdout.strip():
         print(
-            "Building the von-network image (only on the first run, this can take a while)..."
+            "Building the VON Network image (only on the first run, this can take a while)..."
         )
         try:
             subprocess.run(["./manage", "build"], cwd=VON_NETWORK_DIR, check=True)
         except subprocess.CalledProcessError:
-            sys.exit("The von-network image could not be built.")
-
-
-"""def _resolve_dockerhost_ipv4():
-    try:
-        result = subprocess.run(
-            [
-                "docker",
-                "run",
-                "--rm",
-                "alpine",
-                "getent",
-                "ahostsv4",
-                "host.docker.internal",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return None
-    if result.returncode != 0 or not result.stdout.strip():
-        return None
-    
-    return result.stdout.split()[0]"""
+            sys.exit("The VON Network image could not be built.")
 
 
 def _start_von_network():
-    dockerhost_ip = None
-    print("Starting the von-network (the Indy ledger)...")
+    print("Starting the VON Network (the Indy ledger)...")
     try:
-        manage_command = ["./manage", "start"]
-        if dockerhost_ip:
-            print(
-                f"Using {dockerhost_ip} (resolved from host.docker.internal) as the node address..."
-            )
-            manage_command.append(dockerhost_ip)
-        subprocess.run(manage_command, cwd=VON_NETWORK_DIR, check=True)
+        subprocess.run(["./manage", "start"], cwd=VON_NETWORK_DIR, check=True)
     except subprocess.CalledProcessError:
-        sys.exit("von-network could not be started.")
-
-
-def _get_own_ip():
-    try:
-        result = subprocess.run(
-            ["hostname", "-I"], capture_output=True, text=True, timeout=10
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return None
-    if result.returncode != 0 or not result.stdout.strip():
-        return None
-
-    return result.stdout.split()[0]
+        sys.exit("VON Network could not be started.")
 
 
 def _get_webserver_container_name():
@@ -116,7 +72,7 @@ def _restart_webserver():
 
 
 def _wait_for_ledger_ready():
-    print("Waiting for the von-network to answer...")
+    print("Waiting for the VON Network to answer...")
     ledger_ready = False
     attempts = 900  # 30 minutes, 2s for each iteration
     restart_after = 90
@@ -200,7 +156,7 @@ def _save_von_network_name():
             von_network_name = name
             break
     if von_network_name is None:
-        sys.exit("The von-network Docker network could not be found.")
+        sys.exit("The VON Network Docker network could not be found.")
 
     set_key(str(ENV_FILE), "VON_NETWORK_NAME", von_network_name)
     return von_network_name
@@ -240,10 +196,5 @@ def ensure_ledger_up():
     _fetch_genesis()
     _save_von_network_name()
 
-    print("\nvon-network is up and ready.")
-
-    own_ip = _get_own_ip()
+    print("\nVON Network is up and ready.")
     print("\nThe ledger browser can be reached at http://localhost:9000")
-
-    if own_ip and own_ip != "127.0.0.1":
-        print(f"(or from another devide on this network, at http://{own_ip}:9000)")
