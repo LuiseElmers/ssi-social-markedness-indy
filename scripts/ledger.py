@@ -62,6 +62,19 @@ def _get_webserver_container_name():
     return None
 
 
+def _get_own_ip():
+    try:
+        result = subprocess.run(
+            ["hostname", "-I"], capture_output=True, text=True, timeout=10
+        )
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return None
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+
+    return result.stdout.split()[0]
+
+
 def _restart_webserver():
     webserver_name = _get_webserver_container_name()
     if webserver_name:
@@ -198,3 +211,11 @@ def ensure_ledger_up():
 
     print("\nVON Network is up and ready.")
     print("\nThe ledger browser can be reached at http://localhost:9000")
+    print("(works directly on native Linux and inside a Vagrant VM)")
+
+    own_ip = _get_own_ip()
+    if own_ip and own_ip != "127.0.0.1":
+        print(
+            f"If that address is not reachable (for example inside a UTM VM "
+            f"without port forwarding), try http://{own_ip}:9000 instead."
+        )

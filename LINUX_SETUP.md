@@ -189,6 +189,8 @@ ssh <username>@<vm-ip>
 - `<vm-ip>` is the IP address from step 2.
 - From here on, all following commands (like Docker installation, "Running the prototype") can be run from this Mac terminal window instead of UTM's terminal.
 
+If you have not set up an SSH tunnel, `http://localhost:9000` will not work directly on the Mac host. Instead, UTM gives the VM its own network address. `main.py` prints this address automatically once the ledger is ready (`http://<ip>:9000`).
+
 **5. Install Docker, git and Python inside the VM**
 
 Open a terminal inside the running Ubuntu VM and run the following commands:
