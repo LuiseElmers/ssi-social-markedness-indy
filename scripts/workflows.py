@@ -314,20 +314,21 @@ def show_landlord_proof_request():
 
 
 def check_proof_eligibility(employment_info, government_info):
-    problems = []
+    missing_credentials = []
+    predicate_problems = []
 
     if not employment_info:
-        problems.append("No Employment credential yet. Request one first.")
+        missing_credentials.append("No Employment credential yet. Request one first.")
     if not government_info:
-        problems.append("No Digital ID credential yet. Request one first.")
+        missing_credentials.append("No Digital ID credential yet. Request one first.")
 
     if employment_info:
         is_employed = int(employment_info["attrs"].get("is_employed", 0))
         if is_employed < 1:
-            problems.append("Not currently employed.")
+            predicate_problems.append("Not currently employed.")
         income = int(employment_info["attrs"].get("monthly_net_income", 0))
         if income < RENTAL_MIN_MONTHLY_NET_INCOME:
-            problems.append(
+            predicate_problems.append(
                 f"Monthly net income is {income}, which is below the required "
                 f"{RENTAL_MIN_MONTHLY_NET_INCOME}."
             )
@@ -335,12 +336,14 @@ def check_proof_eligibility(employment_info, government_info):
     if government_info:
         birth_date = int(government_info["attrs"].get("date_of_birth", 0))
         if birth_date > legal_age_cutoff():
-            problems.append(f"Not yet of legal age ({RENTAL_MIN_AGE_YEARS}+).")
+            predicate_problems.append(
+                f"Not yet of legal age ({RENTAL_MIN_AGE_YEARS}+)."
+            )
         expiry_date = int(government_info["attrs"].get("expiry_date", 0))
         if expiry_date < today_as_int():
-            problems.append("Digital ID has expired.")
+            predicate_problems.append("Digital ID has expired.")
 
-    return problems
+    return missing_credentials, predicate_problems
 
 
 def landlord_decision(verified):
@@ -373,11 +376,19 @@ def generate_proof():
     employment_info = find_credential_by_cred_def(tenant, employment_cred_def_id)
     government_info = find_credential_by_cred_def(tenant, government_cred_def_id)
 
-    problems = check_proof_eligibility(employment_info, government_info)
-    if problems:
-        print("\nThis proof cannot be sent yet:")
-        for problem in problems:
-            print(f"  - {problem}")
+    missing_credentials, predicate_problems = check_proof_eligibility(
+        employment_info, government_info
+    )
+    if missing_credentials or predicate_problems:
+        if missing_credentials:
+            print("\nThe proof cannot be requested yet:")
+            for problem in missing_credentials:
+                print(f"  - {problem}")
+        if predicate_problems:
+            print("\nThe proof was not sent to the Landlord.")
+            print("Reason: a ZKP cannot be generated for the current credentials.")
+            for problem in predicate_problems:
+                print(f"  - {problem}")
         return
 
     submitted = state.get("rental_proof_submission")
