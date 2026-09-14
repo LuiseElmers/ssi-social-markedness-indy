@@ -76,17 +76,27 @@ STATE_FILE = PROJECT_DIR / "runtime" / "state.json"
 # Schemas
 
 MARKED_ATTRIBUTES = {
+    # Categories of personal data, Regulation (EU) 2016/679, Art. 9(1)
     "race",
     "ethnicity",
+    "political_opinion",
+    "religion",
+    "philosophical_belief",
+    "tade_union_membership",
+    "genetic_data",
+    "biometric_data",
+    "health",
+    "sexual_orientation",
+    # Marked attributes documented in rental housing (Section 4.3)
     "nationality",
     "national_origin",
     "gender",
     "sex",
-    "religion",
-    "disability",
-    "marital_status",
-    "familial_status",
-    "sexual_orientation",
+    "photo",
+    "photograph",
+    "appearance"
+    "disability"
+    # Proxies and attributes restricted to predicate disclosure (Section 4.4.3.1)
     "age",
     "residency_status",
     "current_address",
@@ -99,7 +109,10 @@ PREDICATE_ONLY_ATTRIBUTES = {
 
 
 def check_marked_attributes(schema):
-    marked = set(schema["attributes"]) & MARKED_ATTRIBUTES
+    marked = {
+        attribute for attribute in schema["attributes"]
+        if attribute.lower() in MARKED_ATTRIBUTES
+    }
 
     if marked:
         raise ValueError(
