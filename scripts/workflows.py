@@ -336,9 +336,7 @@ def check_proof_eligibility(employment_info, government_info):
     if government_info:
         birth_date = int(government_info["attrs"].get("date_of_birth", 0))
         if birth_date > legal_age_cutoff():
-            predicate_problems.append(
-                f"Not yet of legal age ({RENTAL_MIN_AGE_YEARS}+)."
-            )
+            predicate_problems.append(f"Not yet of legal age ({RENTAL_MIN_AGE_YEARS}+).")
         expiry_date = int(government_info["attrs"].get("expiry_date", 0))
         if expiry_date < today_as_int():
             predicate_problems.append("Digital ID has expired.")
@@ -376,9 +374,7 @@ def generate_proof():
     employment_info = find_credential_by_cred_def(tenant, employment_cred_def_id)
     government_info = find_credential_by_cred_def(tenant, government_cred_def_id)
 
-    missing_credentials, predicate_problems = check_proof_eligibility(
-        employment_info, government_info
-    )
+    missing_credentials, predicate_problems = check_proof_eligibility(employment_info, government_info)
     if missing_credentials or predicate_problems:
         if missing_credentials:
             print("\nThe proof cannot be requested yet:")
