@@ -82,7 +82,7 @@ MARKED_ATTRIBUTES = {
     "political_opinion",
     "religion",
     "philosophical_belief",
-    "tade_union_membership",
+    "trade_union_membership",
     "genetic_data",
     "biometric_data",
     "health",
@@ -94,8 +94,8 @@ MARKED_ATTRIBUTES = {
     "sex",
     "photo",
     "photograph",
-    "appearance"
-    "disability"
+    "appearance",
+    "disability",
     # Proxies and attributes restricted to predicate disclosure (Section 4.4.3.1)
     "age",
     "residency_status",
